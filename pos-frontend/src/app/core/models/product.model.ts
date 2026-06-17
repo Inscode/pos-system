@@ -1,0 +1,47 @@
+export interface Product {
+  id: number;
+  name: string;
+  description?: string;
+  barcode?: string;
+  categoryId?: number;
+  categoryName?: string;
+  supplierId?: number;
+  supplierName?: string;
+  retailPrice: number;
+  wholesalePrice: number;
+  costPrice?: number;
+  onlinePrice?: number;
+  minWholesaleQty: number;
+  minStockAlert: number;
+  stockQuantity: number;
+  unit: string;
+  imageUrl?: string;
+  emoji?: string;
+  active: boolean;
+  showInPos: boolean;
+  showOnline: boolean;
+  productSource: 'STORE_PRODUCT' | 'SHOP_DIRECT' | 'BOTH';
+  fulfillmentSource: 'STORE' | 'SHOP';
+  badge?: 'SALE' | 'NEW' | 'BEST_SELLER';
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
+export interface Supplier {
+  id: number;
+  name: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  active: boolean;
+}
+
+export interface Salesperson {
+  id: number;
+  name: string;
+  active: boolean;
+}

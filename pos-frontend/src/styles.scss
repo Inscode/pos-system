@@ -1,0 +1,58 @@
+@use '@angular/material' as mat;
+
+// Color palette
+$primary-navy: #1a2332;
+$gold-accent: #c9a84c;
+$light-bg: #f4f6f9;
+$card-bg: #ffffff;
+$success: #2e7d32;
+$danger: #c62828;
+$warning: #ff9800;
+$text-secondary: #6b7280;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', sans-serif;
+  background: $light-bg;
+  color: $primary-navy;
+  font-size: 14px;
+}
+
+// Material overrides
+.mat-mdc-card { border-radius: 8px !important; }
+.mat-mdc-button { font-family: 'Inter', sans-serif !important; }
+
+// Utility
+.text-success { color: $success; }
+.text-danger  { color: $danger; }
+.text-warning { color: $warning; }
+.text-gold    { color: $gold-accent; }
+.text-navy    { color: $primary-navy; }
+.text-muted   { color: #777; }
+
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+
+.lkr::before { content: 'LKR '; }
+
+// Print styles
+@media print {
+  .no-print { display: none !important; }
+  body * { visibility: hidden; }
+  .receipt-content, .receipt-content * { visibility: visible; }
+  .receipt-content {
+    position: absolute;
+    left: 0; top: 0;
+    width: 80mm;
+    font-family: monospace;
+    font-size: 12px;
+  }
+}
+
+// Scrollbar
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #aaa; }

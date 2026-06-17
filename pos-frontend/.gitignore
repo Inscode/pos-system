@@ -1,0 +1,33 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Angular build output
+dist/
+.angular/
+
+# Environment files
+src/environments/environment*.ts
+!src/environments/environment.ts
+.env
+.env.*
+
+# Claude AI / project planning files
+.claude/
+CLAUDE.md
+HARDWARE_PROMPT.txt
+SPEC.md
+*.hardware_prompt
+memory/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log

@@ -43,6 +43,24 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
         </div>
       </div>
 
+      @if (isOwner) {
+        <section class="combined-total-card" aria-label="Combined sales total">
+          <div class="combined-total-main">
+            <span class="combined-total-label">Total sales</span>
+            @if (loading || qsLoading) {
+              <span class="combined-total-loading">Updating totals…</span>
+            } @else {
+              <strong>LKR {{ combinedSalesTotal | number:'1.2-2' }}</strong>
+            }
+            <span class="combined-total-caption">Sales and Quick Sales · {{ selectedDate }}</span>
+          </div>
+          <div class="combined-total-breakdown" [class.is-loading]="loading || qsLoading">
+            <div><span>Sales</span><strong>LKR {{ salesTotal | number:'1.2-2' }}</strong></div>
+            <div><span>Quick Sales</span><strong>LKR {{ quickSalesTotal | number:'1.2-2' }}</strong></div>
+          </div>
+        </section>
+      }
+
       <mat-tab-group animationDuration="150ms" class="sales-tabs">
 
         <!-- Regular Sales -->
@@ -129,6 +147,18 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
     .date-input { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; font-family: 'Inter', sans-serif; font-size: 14px; }
     .worker-select { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; font-family: 'Inter', sans-serif; font-size: 14px; background: #fff; min-width: 170px; }
 
+    .combined-total-card { display:flex; justify-content:space-between; align-items:center; gap:20px; margin:0 0 16px; padding:17px 20px; border:1px solid #dce6f0; border-radius:12px; background:linear-gradient(110deg,#f5f9ff,#fff); box-shadow:0 3px 14px rgba(27,48,80,.045); }
+    .combined-total-main { display:flex; flex-direction:column; gap:3px; }
+    .combined-total-label { color:#64758a; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.45px; }
+    .combined-total-main strong { color:#1b3050; font-size:25px; line-height:1.2; }
+    .combined-total-caption { color:#8995a3; font-size:11px; }
+    .combined-total-loading { color:#64758a; font-size:18px; font-weight:650; }
+    .combined-total-breakdown { display:flex; gap:24px; }
+    .combined-total-breakdown div { display:flex; flex-direction:column; gap:4px; min-width:125px; }
+    .combined-total-breakdown span { color:#8995a3; font-size:11px; }
+    .combined-total-breakdown strong { color:#344a63; font-size:14px; }
+    .combined-total-breakdown.is-loading { opacity:.45; }
+
     .sales-tabs { }
     .tab-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 6px; vertical-align: middle; }
     .tab-count { display: inline-block; background: #e3f2fd; color: #1565c0; border-radius: 10px; font-size: 11px; font-weight: 700; padding: 1px 7px; margin-left: 6px; }
@@ -167,6 +197,10 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
       .page-container { padding: 16px; }
       .page-header { flex-direction: column; gap: 10px; }
       .header-actions { flex-wrap: wrap; }
+      .combined-total-card { align-items:flex-start; flex-direction:column; gap:12px; padding:15px 16px; }
+      .combined-total-breakdown { width:100%; justify-content:space-between; gap:12px; }
+      .combined-total-breakdown div { min-width:0; }
+      .combined-total-main strong { font-size:22px; }
       .sale-row { flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
       .sale-id { min-width: 0; font-size: 12px; }
       .sale-info { font-size: 12px; }
@@ -211,6 +245,10 @@ export class SalesHistoryComponent implements OnInit {
 
   get quickSalesTotal(): number {
     return this.filteredQuickSales.reduce((s, x) => s + (x.total ?? 0), 0);
+  }
+
+  get combinedSalesTotal(): number {
+    return this.salesTotal + this.quickSalesTotal;
   }
 
   ngOnInit() {

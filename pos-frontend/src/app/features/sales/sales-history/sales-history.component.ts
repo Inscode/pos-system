@@ -12,6 +12,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SaleService, QuickSaleService } from '../../../core/services/sale.service';
+import { SalespersonService } from '../../../core/services/product.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dialog.component';
 
 @Component({
@@ -30,6 +32,13 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
           <p class="page-sub">{{ selectedDate }}</p>
         </div>
         <div class="header-actions">
+          <select [(ngModel)]="selectedSalespersonId" (change)="applyWorkerFilter()" class="worker-select" aria-label="Filter sales by worker">
+            @if (isOwner) { <option [ngValue]="null">All workers</option> }
+            @else { <option [ngValue]="null">Select worker</option> }
+            @for (worker of workers; track worker.id) {
+              <option [ngValue]="worker.id">{{ worker.name }}</option>
+            }
+          </select>
           <input type="date" [(ngModel)]="selectedDate" (change)="load()" class="date-input" />
         </div>
       </div>
@@ -40,19 +49,21 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
         <mat-tab>
           <ng-template mat-tab-label>
             <mat-icon class="tab-icon">receipt_long</mat-icon>
-            Sales <span class="tab-count">{{ sales.length }}</span>
+            Sales <span class="tab-count">{{ filteredSales.length }}</span>
           </ng-template>
           <mat-card class="tab-card">
             @if (loading) {
               <div class="empty-state"><mat-spinner diameter="32" /></div>
-            } @else if (sales.length === 0) {
+            } @else if (filteredSales.length === 0) {
               <div class="empty-state">No sales for this date</div>
             } @else {
-              <div class="sales-total-bar">
-                <span>{{ sales.length }} sale(s)</span>
-                <span class="total-sum">Total: LKR {{ salesTotal | number:'1.2-2' }}</span>
-              </div>
-              @for (sale of sales; track sale.id) {
+              @if (showTotals) {
+                <div class="sales-total-bar">
+                  <span>{{ filteredSales.length }} sale(s)</span>
+                  <span class="total-sum">Total: LKR {{ salesTotal | number:'1.2-2' }}</span>
+                </div>
+              }
+              @for (sale of filteredSales; track sale.id) {
                 <div class="sale-row" (click)="viewSale(sale)">
                   <div class="sale-id">#{{ sale.id }}</div>
                   <div class="sale-info">
@@ -63,7 +74,7 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
                   <div class="sale-method">{{ sale.paymentMethod }}</div>
                   <div class="sale-total">LKR {{ sale.total | number:'1.2-2' }}</div>
                   <div class="sale-status" [class]="sale.status?.toLowerCase()">{{ sale.status }}</div>
-                  <div class="sale-time">{{ sale.createdAt | date:'HH:mm' }}</div>
+                  <div class="sale-time">{{ sale.createdAt | date:'HH:mm':'+0530' }}</div>
                 </div>
               }
             }
@@ -74,19 +85,21 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
         <mat-tab>
           <ng-template mat-tab-label>
             <mat-icon class="tab-icon">bolt</mat-icon>
-            Quick Sales <span class="tab-count qs">{{ quickSales.length }}</span>
+            Quick Sales <span class="tab-count qs">{{ filteredQuickSales.length }}</span>
           </ng-template>
           <mat-card class="tab-card">
             @if (qsLoading) {
               <div class="empty-state"><mat-spinner diameter="32" /></div>
-            } @else if (quickSales.length === 0) {
+            } @else if (filteredQuickSales.length === 0) {
               <div class="empty-state">No quick sales for this date</div>
             } @else {
-              <div class="sales-total-bar">
-                <span>{{ quickSales.length }} quick sale(s)</span>
-                <span class="total-sum qs">Total: LKR {{ quickSalesTotal | number:'1.2-2' }}</span>
-              </div>
-              @for (qs of quickSales; track qs.id) {
+              @if (showTotals) {
+                <div class="sales-total-bar">
+                  <span>{{ filteredQuickSales.length }} quick sale(s)</span>
+                  <span class="total-sum qs">Total: LKR {{ quickSalesTotal | number:'1.2-2' }}</span>
+                </div>
+              }
+              @for (qs of filteredQuickSales; track qs.id) {
                 <div class="sale-row qs-row" (click)="viewQuickSale(qs)">
                   <div class="sale-id">#{{ qs.id }}</div>
                   <div class="sale-info">
@@ -97,7 +110,7 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
                   <div class="sale-method">{{ qs.paymentMethod }}</div>
                   <div class="sale-total">LKR {{ qs.total | number:'1.2-2' }}</div>
                   <div class="sale-status completed">DONE</div>
-                  <div class="sale-time">{{ qs.createdAt | date:'HH:mm' }}</div>
+                  <div class="sale-time">{{ qs.createdAt | date:'HH:mm':'+0530' }}</div>
                 </div>
               }
             }
@@ -114,6 +127,7 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
     .page-sub { color: #888; font-size: 13px; margin: 4px 0 0; }
     .header-actions { display: flex; gap: 12px; align-items: center; }
     .date-input { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; font-family: 'Inter', sans-serif; font-size: 14px; }
+    .worker-select { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; font-family: 'Inter', sans-serif; font-size: 14px; background: #fff; min-width: 170px; }
 
     .sales-tabs { }
     .tab-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 6px; vertical-align: middle; }
@@ -169,31 +183,51 @@ export class SalesHistoryComponent implements OnInit {
   private quickSaleService = inject(QuickSaleService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
+  private salespersonService = inject(SalespersonService);
+  private auth = inject(AuthService);
 
   sales: any[] = [];
   quickSales: any[] = [];
+  workers: { id: number; name: string }[] = [];
+  selectedSalespersonId: number | null = null;
   loading = false;
   qsLoading = false;
   selectedDate = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
+  get isOwner(): boolean { return this.auth.isOwner(); }
+  get showTotals(): boolean { return this.isOwner; }
+  get filteredSales(): any[] {
+    if (this.selectedSalespersonId === null) return this.sales;
+    return this.sales.filter(s => s.salesperson?.id === this.selectedSalespersonId || s.salespersonId === this.selectedSalespersonId);
+  }
+  get filteredQuickSales(): any[] {
+    if (this.selectedSalespersonId === null) return this.quickSales;
+    return this.quickSales.filter(s => s.salesperson?.id === this.selectedSalespersonId || s.salespersonId === this.selectedSalespersonId);
+  }
+
   get salesTotal(): number {
-    return this.sales.reduce((s, x) => s + (x.total ?? 0), 0);
+    return this.filteredSales.reduce((s, x) => s + (x.total ?? 0), 0);
   }
 
   get quickSalesTotal(): number {
-    return this.quickSales.reduce((s, x) => s + (x.total ?? 0), 0);
+    return this.filteredQuickSales.reduce((s, x) => s + (x.total ?? 0), 0);
   }
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.salespersonService.getAll().subscribe({ next: workers => this.workers = workers.filter(w => w.active), error: () => this.workers = [] });
+    this.load();
+  }
+
+  applyWorkerFilter() { this.load(); }
 
   load() {
     this.loading = true;
     this.qsLoading = true;
-    this.saleService.getByDate(this.selectedDate).subscribe({
+    this.saleService.getByDate(this.selectedDate, this.selectedSalespersonId).subscribe({
       next: data => { this.sales = data; this.loading = false; },
       error: () => { this.loading = false; }
     });
-    this.quickSaleService.getByDate(this.selectedDate).subscribe({
+    this.quickSaleService.getByDate(this.selectedDate, this.selectedSalespersonId).subscribe({
       next: data => { this.quickSales = data; this.qsLoading = false; },
       error: () => { this.qsLoading = false; }
     });

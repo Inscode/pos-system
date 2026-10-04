@@ -18,7 +18,7 @@ import { PrintService } from '../../../core/services/print.service';
       <div class="detail-header">
         <div>
           <h2>Sale #{{ sale.id }}</h2>
-          <p class="sub">{{ sale.createdAt | date:'dd/MM/yyyy HH:mm' }} · {{ sale.salesperson?.name }}</p>
+          <p class="sub">{{ sale.createdAt | date:'dd/MM/yyyy HH:mm':'+0530' }} · {{ sale.salesperson?.name }}</p>
         </div>
         <span class="status-badge" [class]="sale.status?.toLowerCase()">{{ sale.status }}</span>
       </div>
@@ -173,5 +173,4 @@ export class SaleDetailDialogComponent {
     });
   }
 }
-
 

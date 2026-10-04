@@ -14,6 +14,8 @@ const msg  = (message: string) => of(new HttpResponse({ status: 200, body: { suc
 let nextSaleId = 200;
 let nextNeedId = 10;
 let nextExpenseId = 10;
+let nextDemandProductId = 1;
+let demoDemandProducts: { id: number; name: string; voteCount: number; createdAt: string; lastRequestedAt: string; normalizedName: string; votesAt: string[] }[] = [];
 
 export const demoHttpInterceptor: HttpInterceptorFn = (req, next) => {
   if (localStorage.getItem('pos_token') !== 'DEMO_TOKEN') return next(req);
@@ -126,6 +128,40 @@ export const demoHttpInterceptor: HttpInterceptorFn = (req, next) => {
   // ── Quick Sales ───────────────────────────────────────────────────────────
   if (u.includes('/quick-sales') && m === 'POST') return ok({ id: 300, status: 'COMPLETED' });
   if (u.includes('/quick-sales')) return ok([]);
+
+  // ── Customer product demand ───────────────────────────────────────────────
+  if (u.includes('/demand-products/suggestions')) return ok(demoDemandProducts.map(p => p.name));
+  if (/\/demand-products\/\d+$/.test(u) && m === 'DELETE') {
+    const id = Number(u.match(/\/demand-products\/(\d+)$/)?.[1]);
+    demoDemandProducts = demoDemandProducts.filter(p => p.id !== id);
+    return plain(null);
+  }
+  if (u.includes('/demand-products') && m === 'POST') {
+    const body: any = req.body ?? {};
+    const name = String(body.name ?? '').trim().replace(/\s+/g, ' ');
+    const normalizedName = name.toLowerCase();
+    const now = new Date().toISOString();
+    let item = demoDemandProducts.find(p => p.normalizedName === normalizedName);
+    if (item) {
+      item.voteCount++;
+      item.lastRequestedAt = now;
+      item.votesAt.push(now);
+    } else {
+      item = { id: nextDemandProductId++, name, normalizedName, voteCount: 1, createdAt: now, lastRequestedAt: now, votesAt: [now] };
+      demoDemandProducts.push(item);
+    }
+    return ok({ id: item.id, name: item.name, voteCount: item.voteCount, createdAt: item.createdAt, lastRequestedAt: item.lastRequestedAt });
+  }
+  if (u.includes('/demand-products')) {
+    const from = req.params.get('from');
+    const to = req.params.get('to');
+    const filtered = demoDemandProducts.map(item => {
+      const dates = from && to ? item.votesAt.filter(date => date.slice(0, 10) >= from && date.slice(0, 10) <= to) : item.votesAt;
+      return { ...item, voteCount: dates.length, lastRequestedAt: dates.sort().at(-1) ?? item.lastRequestedAt };
+    }).filter(item => item.voteCount > 0);
+    return ok(filtered.sort((a, b) => b.voteCount - a.voteCount || a.name.localeCompare(b.name))
+      .map(item => ({ id: item.id, name: item.name, voteCount: item.voteCount, createdAt: item.createdAt, lastRequestedAt: item.lastRequestedAt })));
+  }
 
   // ── Returns ───────────────────────────────────────────────────────────────
   if (u.includes('/returns')) return ok([]);

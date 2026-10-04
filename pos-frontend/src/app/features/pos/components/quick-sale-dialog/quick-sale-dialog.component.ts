@@ -18,8 +18,13 @@ interface QsItem {
   quantity: number;
   unitPrice: number;
   productId: number | null;
+  manualProductId?: number | null;
+  manualLineTotal?: number | null;
+  showManualSuggestions?: boolean;
   fromStock: boolean;
 }
+
+interface ManualProductOption { id: number; name: string; unitPrice: number; }
 
 @Component({
   selector: 'app-quick-sale-dialog',
@@ -80,13 +85,30 @@ interface QsItem {
           <div class="section-label" style="margin-top:12px">Items</div>
           <div class="items-list">
             @for (item of items; track item; let i = $index) {
-              <div class="item-row" [class.stock-item]="item.fromStock">
+              <div class="item-row" [class.stock-item]="item.fromStock" [class.manual-item]="!item.fromStock">
                 <div class="item-name">
                   @if (item.fromStock) {
                     <mat-icon class="stock-icon">inventory_2</mat-icon>
                   }
                   @if (!item.fromStock) {
-                    <input class="name-inp" [(ngModel)]="item.name" placeholder="Item name" />
+                    <div class="manual-search-wrap">
+                      <input class="name-inp" [(ngModel)]="item.name" (ngModelChange)="onManualNameInput(i)"
+                        (focus)="item.showManualSuggestions = true" (blur)="item.showManualSuggestions = false"
+                        placeholder="Search saved items or enter a new name" autocomplete="off" />
+                      @if (item.showManualSuggestions && item.name.trim() && filteredManualProducts(item).length > 0) {
+                        <div class="manual-suggestion-menu" role="listbox" aria-label="Saved manual items">
+                          @for (manual of filteredManualProducts(item); track manual.id) {
+                            <button type="button" role="option" class="manual-suggestion-option"
+                              (mousedown)="$event.preventDefault()" (click)="selectManualProduct(i, manual)">
+                              <span>{{ manual.name }}</span><small>Rs {{ manual.unitPrice | number:'1.2-2' }} each</small>
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
+                    @if (item.manualProductId) {
+                      <span class="manual-unit-price">Rs {{ item.unitPrice | number:'1.2-2' }} each</span>
+                    }
                   } @else {
                     <span class="stock-name">{{ item.name }}</span>
                   }
@@ -97,8 +119,13 @@ interface QsItem {
                     (input)="recalc()" min="0.5" step="1" />
                   <button class="qty-btn" (click)="changeQty(i, 1)">+</button>
                 </div>
-                <input class="price-inp" type="number" [(ngModel)]="item.unitPrice"
-                  (input)="recalc()" placeholder="Price" />
+                @if (!item.fromStock && !item.manualProductId) {
+                  <input class="price-inp" type="number" [(ngModel)]="item.manualLineTotal"
+                    (input)="recalcManual(i)" placeholder="Line total" title="Enter total price for this quantity" />
+                } @else {
+                  <input class="price-inp" type="number" [(ngModel)]="item.unitPrice"
+                    (input)="recalc()" placeholder="Each" title="Unit price" />
+                }
                 <span class="item-sub">Rs {{ (item.quantity * item.unitPrice) | number:'1.0-0' }}</span>
                 <button class="del-btn" (click)="removeItem(i)"><mat-icon>close</mat-icon></button>
               </div>
@@ -201,20 +228,34 @@ interface QsItem {
     .items-list { display: flex; flex-direction: column; gap: 6px; }
     .item-row { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; }
     .item-row.stock-item { background: #eff6ff; border-color: #bfdbfe; }
+    .item-row.manual-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "fields fields fields remove" "quantity price subtotal remove"; gap: 8px; padding: 10px; background: #fbfcfe; }
     .item-name { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .manual-item .item-name { grid-area: fields; display: flex; align-items: center; gap: 8px; width: 100%; }
     .stock-icon { font-size: 16px; width: 16px; height: 16px; color: #2563eb; flex-shrink: 0; }
     .stock-name { font-size: 13px; font-weight: 500; color: #1b3050; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .name-inp { border: 1px solid #ddd; border-radius: 6px; padding: 4px 8px; font-size: 13px; font-family: inherit; width: 100%; }
+    .name-inp { border: 1px solid #ddd; border-radius: 6px; padding: 4px 8px; font-size: 13px; font-family: inherit; width: 100%; min-width: 0; box-sizing: border-box; }
+    .manual-search-wrap { position: relative; flex: 1; min-width: 0; }
+    .manual-search-wrap .name-inp { height: 36px; padding: 0 10px; border-radius: 7px; }
+    .manual-suggestion-menu { position: absolute; z-index: 1100; top: calc(100% + 4px); left: 0; right: 0; max-height: 230px; overflow-y: auto; padding: 4px; border: 1px solid #dfe6ee; border-radius: 8px; background: #fff; box-shadow: 0 8px 20px rgba(24,45,72,.16); }
+    .manual-suggestion-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 8px 9px; border: 0; border-radius: 5px; background: #fff; color: #243b56; text-align: left; font: inherit; font-size: 12px; cursor: pointer; }
+    .manual-suggestion-option:hover, .manual-suggestion-option:focus-visible { outline: none; background: #eff6fb; }
+    .manual-suggestion-option span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .manual-suggestion-option small { flex: none; color: #7b8798; font-size: 11px; }
+    .manual-unit-price { display: flex; align-items: center; flex: none; min-width: 98px; padding: 0 10px; height: 36px; box-sizing: border-box; border-radius: 7px; background: #f1f5f9; color: #475569; font-size: 12px; }
     .name-inp:focus { outline: none; border-color: #1b3050; }
     .item-qty { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+    .manual-item .item-qty { grid-area: quantity; }
     .qty-btn { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #ddd; background: white; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
     .qty-btn:hover { border-color: #1b3050; color: #1b3050; }
     .qty-inp { width: 40px; text-align: center; border: 1px solid #ddd; border-radius: 6px; padding: 4px 2px; font-size: 13px; font-family: inherit; }
     .qty-inp:focus { outline: none; border-color: #1b3050; }
-    .price-inp { width: 80px; border: 1px solid #ddd; border-radius: 6px; padding: 5px 8px; font-size: 13px; font-family: inherit; flex-shrink: 0; }
+    .price-inp { width: 80px; border: 1px solid #ddd; border-radius: 6px; padding: 5px 8px; font-size: 13px; font-family: inherit; flex-shrink: 0; box-sizing: border-box; }
+    .manual-item .price-inp { grid-area: price; width: 108px; height: 36px; }
     .price-inp:focus { outline: none; border-color: #1b3050; }
     .item-sub { width: 76px; text-align: right; font-size: 13px; font-weight: 700; color: #1b3050; flex-shrink: 0; }
+    .manual-item .item-sub { grid-area: subtotal; width: auto; white-space: nowrap; align-self: center; }
     .del-btn { background: none; border: none; cursor: pointer; color: #d1d5db; display: flex; align-items: center; padding: 2px; flex-shrink: 0; }
+    .manual-item .del-btn { grid-area: remove; align-self: center; }
     .del-btn:hover { color: #dc2626; }
 
     .add-manual-btn { background: none; border: 1px dashed #d1d5db; border-radius: 8px; width: 100%; padding: 7px; cursor: pointer; color: #6b7280; font-family: inherit; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.15s; }
@@ -261,6 +302,13 @@ interface QsItem {
     .submit-btn { background: #16a34a; color: white; border: none; border-radius: 8px; padding: 10px 24px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.15s; }
     .submit-btn:hover:not(:disabled) { background: #15803d; }
     .submit-btn:disabled { opacity: 0.5; cursor: default; }
+
+    @media (max-width: 560px) {
+      .item-row.manual-item { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "fields fields remove" "quantity price subtotal"; gap: 7px; }
+      .manual-item .item-name { gap: 6px; }
+      .manual-unit-price { min-width: 85px; padding: 0 7px; font-size: 11px; }
+      .manual-item .price-inp { width: 92px; }
+    }
   `]
 })
 export class QuickSaleDialogComponent implements OnInit {
@@ -284,6 +332,7 @@ export class QuickSaleDialogComponent implements OnInit {
   productQuery = '';
   productResults: any[] = [];
   allProducts: any[] = [];
+  manualProducts: ManualProductOption[] = [];
   productsLoaded = false;
 
   onSearch() {
@@ -317,6 +366,7 @@ export class QuickSaleDialogComponent implements OnInit {
     this.spService.getAll().subscribe(s => {
       this.salespersons = s.filter((sp: any) => sp.active);
     });
+    this.quickSaleService.getManualProducts().subscribe({ next: items => this.manualProducts = items, error: () => this.manualProducts = [] });
     this.productService.getAll().subscribe({
       next: p => {
         this.allProducts = p;
@@ -340,7 +390,43 @@ export class QuickSaleDialogComponent implements OnInit {
   }
 
   addManualItem() {
-    this.items.push({ name: '', quantity: 1, unitPrice: 0, productId: null, fromStock: false });
+    this.items.push({ name: '', quantity: 1, unitPrice: 0, productId: null, manualProductId: null, manualLineTotal: null, showManualSuggestions: false, fromStock: false });
+  }
+
+  filteredManualProducts(item: QsItem): ManualProductOption[] {
+    const query = item.name.trim().toLocaleLowerCase();
+    return this.manualProducts
+      .filter(product => !query || product.name.toLocaleLowerCase().includes(query))
+      .sort((a, b) => {
+        if (query) {
+          const aStarts = a.name.toLocaleLowerCase().startsWith(query);
+          const bStarts = b.name.toLocaleLowerCase().startsWith(query);
+          if (aStarts !== bStarts) return aStarts ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 8);
+  }
+
+  onManualNameInput(index: number) {
+    const item = this.items[index];
+    if (item.manualProductId) {
+      item.manualProductId = null;
+      item.unitPrice = 0;
+      item.manualLineTotal = null;
+    }
+    item.showManualSuggestions = true;
+    this.calcChange();
+  }
+
+  selectManualProduct(index: number, saved: ManualProductOption) {
+    const item = this.items[index];
+    item.manualProductId = saved.id;
+    item.name = saved.name;
+    item.unitPrice = saved.unitPrice;
+    item.manualLineTotal = null;
+    item.showManualSuggestions = false;
+    this.calcChange();
   }
 
   removeItem(i: number) {
@@ -351,10 +437,18 @@ export class QuickSaleDialogComponent implements OnInit {
   changeQty(i: number, delta: number) {
     const item = this.items[i];
     item.quantity = Math.max(0.5, (item.quantity || 1) + delta);
+    if (!item.fromStock && !item.manualProductId) this.recalcManual(i);
     this.calcChange();
   }
 
   recalc() { this.calcChange(); }
+
+  recalcManual(index: number) {
+    const item = this.items[index];
+    const lineTotal = item.manualLineTotal ?? 0;
+    item.unitPrice = item.quantity > 0 ? Math.round((lineTotal / item.quantity) * 100) / 100 : 0;
+    this.calcChange();
+  }
 
   setCash(amt: number) {
     this.cashTendered = amt;
@@ -384,7 +478,14 @@ export class QuickSaleDialogComponent implements OnInit {
       cashTendered: this.paymentMethod === 'CASH' && this.cashTendered ? this.cashTendered : null,
       items: this.items
         .filter(i => i.name.trim() && i.unitPrice > 0)
-        .map(i => ({ name: i.name.trim(), quantity: i.quantity || 1, unitPrice: i.unitPrice, productId: i.productId }))
+        .map(i => ({
+          name: i.name.trim(), quantity: i.quantity || 1, productId: i.productId,
+          ...(i.productId === null && i.manualProductId
+            ? { manualProductId: i.manualProductId, unitPrice: i.unitPrice }
+            : i.productId === null
+              ? { lineTotal: i.manualLineTotal }
+              : { unitPrice: i.unitPrice })
+        }))
     };
 
     this.quickSaleService.create(payload).subscribe({

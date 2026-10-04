@@ -10,7 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ReportService } from '../../../core/services/report.service';
 import {
-  DailyReport, RangeReport, ProductStat, SlowStockItem, CashFlowDay
+  DailyReport, RangeReport, ProductStat, ManualItemStat, SlowStockItem, CashFlowDay
 } from '../../../core/models/report.model';
 
 @Component({
@@ -184,13 +184,18 @@ import {
               <input type="date" class="date-inp" [(ngModel)]="prodFrom" />
               <label class="ctrl-label">To</label>
               <input type="date" class="date-inp" [(ngModel)]="prodTo" />
+              <label class="ctrl-label">View</label>
+              <select class="date-inp" [(ngModel)]="productReportMode" (change)="loadProducts()">
+                <option value="PRODUCTS">POS products</option>
+                <option value="MANUAL">Manual quick-sale items</option>
+              </select>
               <button mat-flat-button class="run-btn" (click)="loadProducts()">
                 <mat-icon>bar_chart</mat-icon> Run
               </button>
             </div>
 
             @if (prodLoading) { <div class="spin-center"><mat-spinner diameter="36"/></div> }
-            @else if (products.length > 0) {
+            @else if (productReportMode === 'PRODUCTS' && products.length > 0) {
               <!-- Top 5 summary -->
               <div class="stat-grid four">
                 <mat-card class="stat-card navy"><div class="sl">Products Sold</div><div class="sv">{{ products.length }}</div></mat-card>
@@ -216,8 +221,24 @@ import {
                   <tr mat-row *matRowDef="let r; columns: prodCols;"></tr>
                 </table>
               </mat-card>
+            } @else if (productReportMode === 'MANUAL' && manualItems.length > 0) {
+              <div class="stat-grid manual-summary">
+                <mat-card class="stat-card navy"><div class="sl">Manual Items Sold</div><div class="sv">{{ manualItems.length }}</div></mat-card>
+                <mat-card class="stat-card"><div class="sl">Quantity Sold</div><div class="sv sm">{{ manualItemTotalQty | number:'1.0-2' }}</div></mat-card>
+                <mat-card class="stat-card green"><div class="sl">Revenue</div><div class="sv sm">Rs {{ manualItemTotalRevenue | number:'1.0-0' }}</div></mat-card>
+              </div>
+              <mat-card class="table-card">
+                <div class="card-title">Manual items sold in selected period</div>
+                <table mat-table [dataSource]="manualItems" class="rep-table">
+                  <ng-container matColumnDef="productName"><th mat-header-cell *matHeaderCellDef>Item</th><td mat-cell *matCellDef="let r"><strong>{{ r.productName }}</strong></td></ng-container>
+                  <ng-container matColumnDef="qtySold"><th mat-header-cell *matHeaderCellDef>Qty</th><td mat-cell *matCellDef="let r">{{ r.qtySold | number:'1.0-2' }}</td></ng-container>
+                  <ng-container matColumnDef="revenue"><th mat-header-cell *matHeaderCellDef>Revenue</th><td mat-cell *matCellDef="let r">Rs {{ r.revenue | number:'1.0-0' }}</td></ng-container>
+                  <tr mat-header-row *matHeaderRowDef="manualProdCols"></tr>
+                  <tr mat-row *matRowDef="let r; columns: manualProdCols;"></tr>
+                </table>
+              </mat-card>
             } @else if (!prodLoading) {
-              <div class="empty-hint">Select a date range and click Run.</div>
+              <div class="empty-hint">{{ productReportMode === 'MANUAL' ? 'No manual quick-sale items for this period.' : 'Select a date range and click Run.' }}</div>
             }
           </div>
         </mat-tab>
@@ -375,6 +396,7 @@ import {
     /* Stat grid */
     .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
     .stat-grid.four { grid-template-columns: repeat(4, 1fr); }
+    .stat-grid.manual-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .stat-card { padding: 18px !important; }
     .stat-card.navy { background: #1b3050 !important; color: #fff !important; }
     .stat-card.green { background: #e8f5e9 !important; }
@@ -442,7 +464,7 @@ import {
     .sold-chip.zero { background: #fdecea; color: #c62828; }
 
     @media (max-width: 768px) {
-      .stat-grid, .stat-grid.four { grid-template-columns: repeat(2, 1fr); }
+      .stat-grid, .stat-grid.four, .stat-grid.manual-summary { grid-template-columns: repeat(2, 1fr); }
       .row-cards { grid-template-columns: 1fr; }
       .page-container { padding: 12px; }
       .page-header { flex-direction: column; gap: 8px; }
@@ -469,6 +491,8 @@ export class DailyReportComponent implements OnInit {
   prodFrom = this.monthStart();
   prodTo = new Date().toISOString().split('T')[0];
   products: ProductStat[] = [];
+  manualItems: ManualItemStat[] = [];
+  productReportMode: 'PRODUCTS' | 'MANUAL' = 'PRODUCTS';
   prodLoading = false;
 
   // Top
@@ -491,6 +515,7 @@ export class DailyReportComponent implements OnInit {
   spCols = ['name', 'salesCount', 'totalAmount'];
   rangeCols = ['date', 'salesCount', 'revenue'];
   prodCols = ['productName', 'category', 'qtySold', 'revenue', 'profit', 'margin'];
+  manualProdCols = ['productName', 'qtySold', 'revenue'];
   slowCols = ['productName', 'category', 'stockQuantity', 'qtySoldInPeriod'];
   cfCols = ['date', 'salesCount', 'cashRevenue', 'expenses', 'net'];
 
@@ -500,6 +525,8 @@ export class DailyReportComponent implements OnInit {
     if (!this.products.length) return 0;
     return (this.prodTotalRevenue > 0 ? (this.prodTotalProfit / this.prodTotalRevenue) * 100 : 0).toFixed(1);
   }
+  get manualItemTotalQty() { return this.manualItems.reduce((sum, item) => sum + item.qtySold, 0); }
+  get manualItemTotalRevenue() { return this.manualItems.reduce((sum, item) => sum + item.revenue, 0); }
   get cfTotalCashRev() { return this.cashFlow.reduce((s, d) => s + d.cashRevenue, 0); }
   get cfTotalExp() { return this.cashFlow.reduce((s, d) => s + d.expenses, 0); }
   get cfNet() { return this.cashFlow.reduce((s, d) => s + d.net, 0); }
@@ -544,10 +571,17 @@ export class DailyReportComponent implements OnInit {
 
   loadProducts() {
     this.prodLoading = true;
-    this.reportService.getProducts(this.prodFrom, this.prodTo).subscribe({
-      next: r => { this.products = r; this.prodLoading = false; },
-      error: () => { this.prodLoading = false; }
-    });
+    if (this.productReportMode === 'MANUAL') {
+      this.reportService.getManualItems(this.prodFrom, this.prodTo).subscribe({
+        next: r => { this.manualItems = r; this.prodLoading = false; },
+        error: () => { this.prodLoading = false; }
+      });
+    } else {
+      this.reportService.getProducts(this.prodFrom, this.prodTo).subscribe({
+        next: r => { this.products = r; this.prodLoading = false; },
+        error: () => { this.prodLoading = false; }
+      });
+    }
   }
 
   loadTop() {
@@ -574,5 +608,3 @@ export class DailyReportComponent implements OnInit {
     });
   }
 }
-
-

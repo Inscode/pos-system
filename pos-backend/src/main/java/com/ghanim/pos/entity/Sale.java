@@ -2,7 +2,6 @@ package com.ghanim.pos.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -64,7 +63,6 @@ public class Sale {
     private String cancelReason;
     private LocalDateTime cancelledAt;
 
-    @CreationTimestamp
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

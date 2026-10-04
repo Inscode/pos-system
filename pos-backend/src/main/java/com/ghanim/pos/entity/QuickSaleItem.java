@@ -22,6 +22,10 @@ public class QuickSaleItem {
     @Column(name = "product_id")
     private Long productId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manual_product_id")
+    private ManualProduct manualProduct;
+
     @Column(nullable = false)
     private String name;
 

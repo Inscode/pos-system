@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { DailyReport, RangeReport, ProductStat, SlowStockItem, CashFlowDay } from '../models/report.model';
+import { DailyReport, RangeReport, ProductStat, ManualItemStat, SlowStockItem, CashFlowDay } from '../models/report.model';
 
 @Injectable({ providedIn: 'root' })
 export class ReportService {
@@ -22,6 +22,10 @@ export class ReportService {
 
   getProducts(from: string, to: string): Observable<ProductStat[]> {
     return this.http.get<any>(`${this.base}/products`, { params: { from, to } }).pipe(map(r => r.data));
+  }
+
+  getManualItems(from: string, to: string): Observable<ManualItemStat[]> {
+    return this.http.get<any>(`${this.base}/manual-items`, { params: { from, to } }).pipe(map(r => r.data));
   }
 
   getSlowStock(days: number = 30): Observable<SlowStockItem[]> {

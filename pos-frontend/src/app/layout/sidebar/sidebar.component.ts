@@ -338,6 +338,7 @@ export class SidebarComponent {
     { label: 'Reports',      icon: 'bar_chart',              route: '/reports',            roles: ['OWNER'] },
     { label: 'Expenses',     icon: 'account_balance_wallet', route: '/expenses',           roles: ['OWNER', 'CASHIER'] },
     { label: 'Shop Supplies',icon: 'shopping_bag',           route: '/shop-supplies',      roles: ['OWNER', 'CASHIER'] },
+    { label: 'Demand Products',icon: 'how_to_vote',           route: '/demand-products',    roles: ['OWNER', 'CASHIER'] },
     // SALESPERSON route
     { label: 'Needs List',   icon: 'checklist',              route: '/needs',              roles: ['OWNER', 'SALESPERSON'] },
     // STORE_PERSON route
@@ -388,5 +389,4 @@ export class SidebarComponent {
     this.auth.logout();
   }
 }
-
 

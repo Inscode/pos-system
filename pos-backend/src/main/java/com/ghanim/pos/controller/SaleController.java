@@ -27,9 +27,10 @@ public class SaleController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getByDate(
-            @RequestParam(required = false) String date) {
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) Long salespersonId) {
         LocalDate d = (date != null && !date.isBlank()) ? LocalDate.parse(date) : LocalDate.now();
-        return ResponseEntity.ok(ApiResponse.ok(saleService.getByDate(d)));
+        return ResponseEntity.ok(ApiResponse.ok(saleService.getByDate(d, salespersonId)));
     }
 
     @GetMapping("/{id}")

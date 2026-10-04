@@ -2,7 +2,6 @@ package com.ghanim.pos.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -36,7 +35,6 @@ public class QuickSale {
 
     private String notes;
 
-    @CreationTimestamp
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "quickSale", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

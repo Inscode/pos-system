@@ -116,7 +116,7 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
                 <div class="item-qty">
                   <button class="qty-btn" (click)="changeQty(i, -1)">−</button>
                   <input class="qty-inp" type="number" [(ngModel)]="item.quantity"
-                    (input)="recalc()" min="0.5" step="1" />
+                    (input)="onQuantityInput(i)" min="0.5" step="1" />
                   <button class="qty-btn" (click)="changeQty(i, 1)">+</button>
                 </div>
                 @if (!item.fromStock && !item.manualProductId) {
@@ -437,11 +437,25 @@ export class QuickSaleDialogComponent implements OnInit {
   changeQty(i: number, delta: number) {
     const item = this.items[i];
     item.quantity = Math.max(0.5, (item.quantity || 1) + delta);
-    if (!item.fromStock && !item.manualProductId) this.recalcManual(i);
+    if (!item.fromStock && !item.manualProductId) this.syncManualLineTotal(i);
     this.calcChange();
   }
 
   recalc() { this.calcChange(); }
+
+  onQuantityInput(index: number) {
+    const item = this.items[index];
+    if (!item.fromStock && !item.manualProductId) this.syncManualLineTotal(index);
+    this.calcChange();
+  }
+
+  private syncManualLineTotal(index: number) {
+    const item = this.items[index];
+    const quantity = Number(item.quantity);
+    item.manualLineTotal = quantity > 0
+      ? Math.round(quantity * item.unitPrice * 100) / 100
+      : 0;
+  }
 
   recalcManual(index: number) {
     const item = this.items[index];

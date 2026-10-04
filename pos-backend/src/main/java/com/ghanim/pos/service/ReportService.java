@@ -27,6 +27,7 @@ public class ReportService {
     private final ReturnRepository returnRepository;
     private final ReturnItemRepository returnItemRepository;
     private final QuickSaleRepository quickSaleRepository;
+    private final QuickSaleItemRepository quickSaleItemRepository;
 
     // ── Daily Report ─────────────────────────────────────────────────────────
 
@@ -264,6 +265,18 @@ public class ReportService {
             m.put("margin", margin.setScale(1, RoundingMode.HALF_UP));
             return m;
         }).collect(Collectors.toList());
+    }
+
+    public List<Map<String, Object>> getManualItemReport(LocalDate from, LocalDate to) {
+        List<Object[]> rows = quickSaleItemRepository.manualItemSalesBetween(
+                from.atStartOfDay(), to.atTime(23, 59, 59));
+        return rows.stream().map(row -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("productName", row[0]);
+            item.put("qtySold", row[1]);
+            item.put("revenue", row[2]);
+            return item;
+        }).toList();
     }
 
     // ── Slow Moving Stock ────────────────────────────────────────────────────

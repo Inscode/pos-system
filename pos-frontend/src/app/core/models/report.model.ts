@@ -55,6 +55,12 @@ export interface ProductStat {
   margin: number;
 }
 
+export interface ManualItemStat {
+  productName: string;
+  qtySold: number;
+  revenue: number;
+}
+
 export interface SlowStockItem {
   productId: number;
   productName: string;

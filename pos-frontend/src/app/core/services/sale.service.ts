@@ -15,8 +15,10 @@ export class SaleService {
     return this.http.post<any>(`${this.base}/checkout`, request).pipe(map(r => r.data));
   }
 
-  getByDate(date: string): Observable<any[]> {
-    return this.http.get<any>(this.base, { params: { date } }).pipe(map(r => r.data));
+  getByDate(date: string, salespersonId?: number | null): Observable<any[]> {
+    const params: Record<string, string> = { date };
+    if (salespersonId != null) params['salespersonId'] = String(salespersonId);
+    return this.http.get<any>(this.base, { params }).pipe(map(r => r.data));
   }
 
   getById(id: number): Observable<any> {
@@ -45,8 +47,14 @@ export class QuickSaleService {
     return this.http.post<any>(this.base, payload).pipe(map(r => r.data));
   }
 
-  getByDate(date: string): Observable<any[]> {
-    return this.http.get<any>(this.base, { params: { date } }).pipe(map(r => r.data));
+  getManualProducts(): Observable<{ id: number; name: string; unitPrice: number }[]> {
+    return this.http.get<any>(`${environment.apiUrl}/manual-products`).pipe(map(r => r.data));
+  }
+
+  getByDate(date: string, salespersonId?: number | null): Observable<any[]> {
+    const params: Record<string, string> = { date };
+    if (salespersonId != null) params['salespersonId'] = String(salespersonId);
+    return this.http.get<any>(this.base, { params }).pipe(map(r => r.data));
   }
 
   getById(id: number): Observable<any> {

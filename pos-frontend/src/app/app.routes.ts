@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, ownerGuard, storePersonGuard, needsGuard } from './core/guards/auth.guard';
+import { authGuard, ownerGuard, storePersonGuard, needsGuard, cashierOrOwnerGuard } from './core/guards/auth.guard';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
@@ -31,6 +31,7 @@ export const routes: Routes = [
       { path: 'reports',             loadComponent: () => import('./features/reports/daily-report/daily-report.component').then(m => m.DailyReportComponent), canActivate: [ownerGuard] },
       { path: 'expenses',            loadComponent: () => import('./features/expenses/expenses.component').then(m => m.ExpensesComponent) },
       { path: 'shop-supplies',       loadComponent: () => import('./features/shop-supplies/shop-supplies.component').then(m => m.ShopSuppliesComponent) },
+      { path: 'demand-products',     loadComponent: () => import('./features/demand-products/demand-products.component').then(m => m.DemandProductsComponent), canActivate: [cashierOrOwnerGuard] },
       { path: 'needs',               loadComponent: () => import('./features/needs/needs.component').then(m => m.NeedsComponent), canActivate: [needsGuard] },
       { path: 'store-needs',         loadComponent: () => import('./features/store-needs/store-needs.component').then(m => m.StoreNeedsComponent), canActivate: [storePersonGuard] },
       { path: 'settings',            loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent), canActivate: [ownerGuard] },

@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -99,6 +100,7 @@ public class SaleService {
                 .changeAmount(changeAmount)
                 .notes(request.getNotes())
                 .status(saleStatus)
+                .createdAt(LocalDateTime.now(ZoneId.of("Asia/Colombo")))
                 .build();
 
         sale = saleRepository.save(sale);
@@ -149,11 +151,12 @@ public class SaleService {
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> getByDate(LocalDate date) {
+    public List<Map<String, Object>> getByDate(LocalDate date, Long salespersonId) {
         LocalDateTime from = date.atStartOfDay();
         LocalDateTime to   = date.atTime(23, 59, 59);
         return saleRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(from, to)
-                .stream().map(s -> buildSummary(s)).toList();
+                .stream().filter(s -> salespersonId == null || (s.getSalesperson() != null && salespersonId.equals(s.getSalesperson().getId())))
+                .map(this::buildSummary).toList();
     }
 
     @Transactional(readOnly = true)
@@ -191,8 +194,10 @@ public class SaleService {
         m.put("paymentMethod", s.getPaymentMethod());
         m.put("total", s.getTotal());
         m.put("status", s.getStatus());
-        m.put("createdAt", s.getCreatedAt());
-        m.put("salesperson", s.getSalesperson() != null ? Map.of("name", s.getSalesperson().getName()) : null);
+        m.put("createdAt", s.getCreatedAt() != null
+                ? s.getCreatedAt().atZone(ZoneId.of("Asia/Colombo")).toOffsetDateTime() : null);
+        m.put("salesperson", s.getSalesperson() != null
+                ? Map.of("id", s.getSalesperson().getId(), "name", s.getSalesperson().getName()) : null);
         return m;
     }
 

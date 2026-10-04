@@ -39,6 +39,13 @@ public class ReportController {
         return ResponseEntity.ok(ApiResponse.ok(reportService.getProductReport(from, to)));
     }
 
+    @GetMapping("/manual-items")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> manualItems(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(ApiResponse.ok(reportService.getManualItemReport(from, to)));
+    }
+
     @GetMapping("/slow-stock")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> slowStock(
             @RequestParam(defaultValue = "30") int days) {

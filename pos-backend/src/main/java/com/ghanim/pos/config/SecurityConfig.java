@@ -59,6 +59,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/upload").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/demand-products/suggestions")
+                                .hasAnyRole("OWNER", "CASHIER")
+                        .requestMatchers(HttpMethod.GET, "/api/demand-products").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/demand-products")
+                                .hasAnyRole("OWNER", "CASHIER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/demand-products/**").hasRole("OWNER")
                         .requestMatchers(HttpMethod.POST,
                                 "/api/categories",
                                 "/api/suppliers",

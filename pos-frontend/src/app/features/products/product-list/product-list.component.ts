@@ -34,7 +34,7 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
       <div class="page-header">
         <div>
           <h1 class="page-title">Products</h1>
-          <p class="page-sub">Manage shop inventory</p>
+          <p class="page-sub">Manage shop inventory <span class="catalog-count">{{ allProducts.length }} product types entered</span></p>
         </div>
         <button mat-flat-button class="primary-btn" (click)="openForm()">
           <mat-icon>add</mat-icon> Add Product
@@ -99,7 +99,7 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
       }
 
       <mat-card>
-        <table mat-table [dataSource]="products" [trackBy]="trackById" class="product-table">
+        <table mat-table [dataSource]="paginatedProducts" [trackBy]="trackById" class="product-table">
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef>Product</th>
             <td mat-cell *matCellDef="let p">
@@ -193,6 +193,28 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
         @if (products.length === 0) {
           <div class="empty-state">No products found</div>
         }
+        @if (products.length > 0) {
+          <div class="pagination-bar">
+            <span class="pagination-range">Showing {{ firstVisibleProduct }}–{{ lastVisibleProduct }} of {{ products.length }} products</span>
+            <div class="pagination-controls">
+              <label class="page-size-label">Rows
+                <select [(ngModel)]="pageSize" (ngModelChange)="pageIndex = 0" aria-label="Products per page">
+                  <option [ngValue]="10">10</option>
+                  <option [ngValue]="25">25</option>
+                  <option [ngValue]="50">50</option>
+                  <option [ngValue]="100">100</option>
+                </select>
+              </label>
+              <button type="button" class="page-btn" (click)="previousPage()" [disabled]="pageIndex === 0" aria-label="Previous page">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span class="page-number">Page {{ pageIndex + 1 }} of {{ pageCount }}</span>
+              <button type="button" class="page-btn" (click)="nextPage()" [disabled]="pageIndex + 1 >= pageCount" aria-label="Next page">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
       </mat-card>
     </div>
   `,
@@ -201,6 +223,7 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
     .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
     .page-title { font-size: 22px; font-weight: 700; color: #1b3050; }
     .page-sub { color: #6b7280; font-size: 13px; }
+    .catalog-count { display:inline-flex; align-items:center; margin-left:8px; padding:3px 8px; border-radius:12px; background:#eef4fb; color:#385976; font-size:11px; font-weight:650; white-space:nowrap; }
     .primary-btn { background: #1b3050 !important; color: #fff !important; }
     .filter-card { margin-bottom: 16px; padding: 16px !important; }
     .filter-row { display: flex; gap: 16px; }
@@ -236,6 +259,14 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
     .deactivate-btn { color: #b45309 !important; }
     .reactivate-btn { color: #2e7d32 !important; }
     .delete-btn { color: #c62828 !important; }
+    .pagination-bar { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:12px 16px; border-top:1px solid #eef0f4; color:#748195; font-size:12px; }
+    .pagination-controls { display:flex; align-items:center; gap:8px; }
+    .page-size-label { display:flex; align-items:center; gap:6px; color:#748195; }
+    .page-size-label select { height:32px; border:1px solid #d8e0e9; border-radius:6px; padding:0 7px; background:#fff; color:#34445a; font:inherit; }
+    .page-btn { display:grid; place-items:center; width:32px; height:32px; border:1px solid #d8e0e9; border-radius:6px; background:#fff; color:#385976; cursor:pointer; }
+    .page-btn:disabled { color:#b8c1cc; cursor:default; background:#f8fafc; }
+    .page-btn mat-icon { font-size:20px; width:20px; height:20px; }
+    .page-number { min-width:78px; text-align:center; color:#506176; }
     .requests-card { margin-bottom: 16px; padding: 0 !important; overflow: hidden; }
     .req-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eef0f4; }
     .req-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #1b3050; }
@@ -258,6 +289,8 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
       .search-field { min-width: 0; flex: 1 1 100%; }
       .inactive-toggle { align-self: auto; }
       .product-table { font-size: 12px; }
+      .pagination-bar { align-items:flex-start; flex-direction:column; }
+      .pagination-controls { align-self:flex-end; }
       .thumb { width: 32px; height: 32px; }
       .thumb-placeholder { width: 32px; height: 32px; }
       .p-name { font-size: 12px; }
@@ -286,7 +319,17 @@ export class ProductListComponent implements OnInit {
   search = '';
   categoryFilter: number | null = null;
   showInactive = false;
+  pageIndex = 0;
+  pageSize = 25;
   cols = ['name', 'code', 'category', 'retail', 'wholesale', 'stock', 'status', 'actions'];
+
+  get pageCount(): number { return Math.max(1, Math.ceil(this.products.length / this.pageSize)); }
+  get firstVisibleProduct(): number { return this.products.length ? this.pageIndex * this.pageSize + 1 : 0; }
+  get lastVisibleProduct(): number { return Math.min((this.pageIndex + 1) * this.pageSize, this.products.length); }
+  get paginatedProducts(): Product[] {
+    const start = this.pageIndex * this.pageSize;
+    return this.products.slice(start, start + this.pageSize);
+  }
 
   ngOnInit() {
     this.loadProducts();
@@ -328,7 +371,11 @@ export class ProductListComponent implements OnInit {
       );
       return matchCat && matchSearch;
     });
+    this.pageIndex = 0;
   }
+
+  previousPage() { this.pageIndex = Math.max(0, this.pageIndex - 1); }
+  nextPage() { this.pageIndex = Math.min(this.pageCount - 1, this.pageIndex + 1); }
 
   loadProducts() {
     this.productService.getAll(undefined, undefined, this.showInactive).subscribe(p => { this.allProducts = p; this.applyFilter(); });

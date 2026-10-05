@@ -177,7 +177,9 @@ type Tab = 'needed' | 'resolved' | 'all';
             <button class="close-form-btn" (click)="selectedNeed = null"><mat-icon>close</mat-icon></button>
           </div>
           <div class="rr-actions">
-            @if (selectedNeed.status === 'NEEDED') {
+            @if (auth.isCashier()) {
+              <p class="rr-hint">This list is read-only for cashiers. You can add a new need from above.</p>
+            } @else if (selectedNeed.status === 'NEEDED') {
               <p class="rr-hint">This item is already pending. Owner will mark it purchased when done.</p>
               @if (auth.isOwner()) {
                 <button class="action-purchased" (click)="markPurchased(selectedNeed)">
@@ -315,9 +317,11 @@ type Tab = 'needed' | 'resolved' | 'all';
                     </button>
                   }
                 } @else {
-                  <button class="icon-action rerequest" (click)="reRequest(need)" matTooltip="Need again">
-                    <mat-icon>refresh</mat-icon>
-                  </button>
+                  @if (!auth.isCashier()) {
+                    <button class="icon-action rerequest" (click)="reRequest(need)" matTooltip="Need again">
+                      <mat-icon>refresh</mat-icon>
+                    </button>
+                  }
                   @if (auth.isOwner()) {
                     <button class="icon-action del" (click)="deleteNeed(need)" matTooltip="Delete">
                       <mat-icon>delete_outline</mat-icon>

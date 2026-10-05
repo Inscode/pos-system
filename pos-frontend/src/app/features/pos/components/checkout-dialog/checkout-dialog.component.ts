@@ -53,13 +53,16 @@ import { Customer } from '../../../../core/models/customer.model';
         <div class="payment-section">
           @if (data.salespersons.length) {
             <mat-form-field appearance="outline" class="full-width" style="margin-bottom:4px">
-              <mat-label>Salesperson</mat-label>
-              <mat-select [(ngModel)]="selectedSalespersonId">
+              <mat-label>Salesperson *</mat-label>
+              <mat-select [(ngModel)]="selectedSalespersonId" placeholder="Select salesperson" required>
                 @for (sp of data.salespersons; track sp.id) {
                   <mat-option [value]="sp.id">{{ sp.name }}</mat-option>
                 }
               </mat-select>
+              @if (!selectedSalespersonId) { <mat-hint>Choose who made this sale</mat-hint> }
             </mat-form-field>
+          } @else {
+            <p class="hint-warn">No salesperson is available. Add or activate a salesperson before checkout.</p>
           }
 
           <!-- Customer selector: shown for wholesale or credit -->
@@ -226,7 +229,7 @@ export class CheckoutDialogComponent implements OnInit {
   data: {
     cart: CartItem[]; subtotal: number; totalDiscount: number;
     billDiscount: number; cartTotal: number; sessionId: number;
-    salespersonId: number; salespersons: Salesperson[]; saleType: string;
+    salespersonId: number | null; salespersons: Salesperson[]; saleType: string;
   } = inject(MAT_DIALOG_DATA);
   private saleService = inject(SaleService);
   private customerService = inject(CustomerService);
@@ -252,6 +255,7 @@ export class CheckoutDialogComponent implements OnInit {
 
   get confirmDisabled(): boolean {
     if (this.loading) return true;
+    if (this.selectedSalespersonId === null || this.data.salespersons.length === 0) return true;
     if (this.paymentMethod === 'CASH' && this.cashTendered < this.total) return true;
     if (this.paymentMethod === 'CREDIT' && !this.selectedCustomer) return true;
     return false;
@@ -265,7 +269,7 @@ export class CheckoutDialogComponent implements OnInit {
 
   ngOnInit() {
     this.total = this.data.cartTotal;
-    this.selectedSalespersonId = this.data.salespersonId;
+    this.selectedSalespersonId = null;
     this.calcChange();
     this.customerService.getAll().subscribe(c => {
       this.customers = c;

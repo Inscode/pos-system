@@ -1,6 +1,7 @@
 package com.ghanim.pos.controller;
 
 import com.ghanim.pos.entity.PurchaseNeed;
+import com.ghanim.pos.repository.UserRepository;
 import com.ghanim.pos.service.PurchaseNeedService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/purchase-needs")
@@ -16,6 +18,7 @@ import java.util.Map;
 public class PurchaseNeedController {
 
     private final PurchaseNeedService service;
+    private final UserRepository userRepository;
 
     @GetMapping
     public List<PurchaseNeed> getAll(@RequestParam(required = false) String search,
@@ -28,8 +31,11 @@ public class PurchaseNeedController {
     }
 
     @PostMapping
-    public PurchaseNeed create(@RequestBody Map<String, Object> body) {
-        return service.create(body);
+    public PurchaseNeed create(@RequestBody Map<String, Object> body, Authentication auth) {
+        Map<String, Object> request = new HashMap<>(body);
+        request.put("requestedBy", userRepository.findByUsername(auth.getName())
+                .map(user -> user.getName()).orElse(auth.getName()));
+        return service.create(request);
     }
 
     @PatchMapping("/{id}/status")

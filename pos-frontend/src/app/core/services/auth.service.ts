@@ -82,7 +82,7 @@ export class AuthService {
 
   canAddNeeds(): boolean {
     const r = this.currentUser()?.role;
-    return r === 'OWNER' || r === 'SALESPERSON';
+    return r === 'OWNER' || r === 'SALESPERSON' || r === 'CASHIER';
   }
 
   defaultRoute(): string {

@@ -195,9 +195,9 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
     </div>
   `,
   styles: [`
-    .qs-wrap { width: 540px; display: flex; flex-direction: column; max-height: 90vh; }
+    .qs-wrap { width: min(540px, 92vw); display: flex; flex-direction: column; max-height: 90vh; min-height:0; overflow:hidden; }
     .qs-title { font-size: 18px; font-weight: 700; color: #1b3050; margin: 0; padding: 20px 24px 12px; border-bottom: 1px solid #f0f0f0; }
-    .qs-body { flex: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+    .qs-body { flex: 1 1 auto; min-height:0; overflow-y: auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding: 16px 24px; display: flex; flex-direction: column; gap: 10px; }
     .full { width: 100%; }
 
     .section-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -296,7 +296,7 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
     .notes-inp:focus { outline: none; border-color: #1b3050; }
 
     /* Actions */
-    .qs-actions { display: flex; gap: 10px; padding: 12px 24px 16px; border-top: 1px solid #f0f0f0; justify-content: flex-end; }
+    .qs-actions { display: flex; flex:0 0 auto; gap: 10px; padding: 12px 24px 16px; border-top: 1px solid #f0f0f0; justify-content: flex-end; background:#fff; }
     .cancel-btn { background: none; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 20px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: #6b7280; transition: all 0.15s; }
     .cancel-btn:hover { border-color: #9ca3af; color: #374151; }
     .submit-btn { background: #16a34a; color: white; border: none; border-radius: 8px; padding: 10px 24px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.15s; }

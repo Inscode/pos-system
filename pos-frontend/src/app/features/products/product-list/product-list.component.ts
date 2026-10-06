@@ -12,6 +12,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ProductService, CategoryService } from '../../../core/services/product.service';
 import { Product, Category } from '../../../core/models/product.model';
 import { ProductFormComponent } from '../product-form/product-form.component';
@@ -26,7 +27,7 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatDialogModule, MatSnackBarModule, MatTooltipModule, MatChipsModule,
+    MatDialogModule, MatSnackBarModule, MatTooltipModule, MatChipsModule, MatProgressSpinnerModule,
     LabelPrintDialogComponent
   ],
   template: `
@@ -99,6 +100,26 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
       }
 
       <mat-card>
+        @if (loadingProducts) {
+          <div class="products-loading" role="status" aria-live="polite">
+            <div class="loading-message">
+              <mat-spinner diameter="28"></mat-spinner>
+              <div><strong>Loading products</strong><span>Getting your inventory ready…</span></div>
+            </div>
+            <div class="skeleton-list" aria-hidden="true">
+              @for (row of skeletonRows; track row) {
+                <div class="skeleton-row"><i></i><i></i><i></i></div>
+              }
+            </div>
+          </div>
+        } @else if (productsLoadError) {
+          <div class="products-error" role="alert">
+            <mat-icon>cloud_off</mat-icon>
+            <strong>Products couldn’t be loaded</strong>
+            <span>Check your connection and try again.</span>
+            <button mat-stroked-button type="button" (click)="loadProducts()">Try again</button>
+          </div>
+        } @else {
         <table mat-table [dataSource]="paginatedProducts" [trackBy]="trackById" class="product-table">
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef>Product</th>
@@ -191,7 +212,14 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
           <tr mat-row *matRowDef="let row; columns: cols;" [class.inactive-row]="!row.active"></tr>
         </table>
         @if (products.length === 0) {
-          <div class="empty-state">No products found</div>
+          <div class="empty-state">
+            <mat-icon>inventory_2</mat-icon>
+            <strong>{{ allProducts.length ? 'No matching products' : 'No products yet' }}</strong>
+            <span>{{ allProducts.length ? 'Try another search or category.' : 'Add a product to start building your inventory.' }}</span>
+            @if (allProducts.length && (search || categoryFilter !== null)) {
+              <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
+            }
+          </div>
         }
         @if (products.length > 0) {
           <div class="pagination-bar">
@@ -215,6 +243,7 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
             </div>
           </div>
         }
+        }
       </mat-card>
     </div>
   `,
@@ -229,6 +258,17 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
     .filter-row { display: flex; gap: 16px; }
     .search-field { flex: 1; }
     .product-table { width: 100%; }
+    .products-loading { padding:20px 16px 12px; }
+    .loading-message { display:flex; align-items:center; justify-content:center; gap:12px; padding:20px 12px 24px; color:#1b3050; }
+    .loading-message div { display:flex; flex-direction:column; gap:3px; }
+    .loading-message strong { font-size:14px; font-weight:700; }
+    .loading-message span { color:#8995a3; font-size:12px; }
+    .skeleton-list { display:flex; flex-direction:column; gap:10px; }
+    .skeleton-row { display:grid; grid-template-columns:minmax(180px, 2fr) minmax(80px, 1fr) minmax(80px, 1fr); gap:14px; padding:12px 8px; border-top:1px solid #f0f2f5; }
+    .skeleton-row i { height:13px; border-radius:7px; background:linear-gradient(90deg,#f0f3f7 25%,#e5eaf0 38%,#f0f3f7 60%); background-size:400% 100%; animation:product-shimmer 1.35s ease infinite; }
+    .skeleton-row i:first-child { max-width:72%; }
+    .skeleton-row i:last-child { max-width:55%; }
+    @keyframes product-shimmer { 0% { background-position:100% 0; } 100% { background-position:0 0; } }
     .product-cell { display: flex; align-items: center; gap: 12px; }
     .thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
     .thumb-placeholder {
@@ -245,7 +285,15 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
     }
     .active { background: #e8f5e9; color: #2e7d32; }
     .inactive { background: #fdecea; color: #c62828; }
-    .empty-state { padding: 40px; text-align: center; color: #6b7280; }
+    .empty-state { display:flex; flex-direction:column; align-items:center; gap:8px; padding:40px 20px; text-align:center; color:#6b7280; }
+    .empty-state mat-icon { width:34px; height:34px; font-size:34px; color:#9aa8b8; }
+    .empty-state strong { color:#344a63; font-size:15px; }
+    .empty-state span { font-size:12px; }
+    .empty-state button { margin-top:6px; }
+    .products-error { display:flex; flex-direction:column; align-items:center; gap:8px; padding:40px 20px; color:#64758a; text-align:center; }
+    .products-error mat-icon { width:34px; height:34px; font-size:34px; color:#d97706; }
+    .products-error strong { color:#344a63; font-size:15px; }
+    .products-error span { font-size:12px; }
     .inactive-row { opacity: 0.55; background: #fafafa; }
     .inactive-toggle {
       display: flex; align-items: center; gap: 6px; align-self: center;
@@ -294,6 +342,8 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
       .thumb { width: 32px; height: 32px; }
       .thumb-placeholder { width: 32px; height: 32px; }
       .p-name { font-size: 12px; }
+      .skeleton-row { grid-template-columns:minmax(100px, 2fr) minmax(50px, 1fr); gap:8px; }
+      .skeleton-row i:last-child { display:none; }
 
       /* Hide less critical columns — keep product name, retail price, stock, actions */
       .cdk-column-code,
@@ -314,6 +364,9 @@ export class ProductListComponent implements OnInit {
   isOwner = this.authService.isOwner();
   allProducts: Product[] = [];
   products: Product[] = [];
+  loadingProducts = false;
+  productsLoadError = false;
+  skeletonRows = [1, 2, 3, 4, 5];
   categories: Category[] = [];
   pendingRequests: StockRequest[] = [];
   search = '';
@@ -374,11 +427,29 @@ export class ProductListComponent implements OnInit {
     this.pageIndex = 0;
   }
 
+  clearFilters() {
+    this.search = '';
+    this.categoryFilter = null;
+    this.applyFilter();
+  }
+
   previousPage() { this.pageIndex = Math.max(0, this.pageIndex - 1); }
   nextPage() { this.pageIndex = Math.min(this.pageCount - 1, this.pageIndex + 1); }
 
   loadProducts() {
-    this.productService.getAll(undefined, undefined, this.showInactive).subscribe(p => { this.allProducts = p; this.applyFilter(); });
+    this.loadingProducts = true;
+    this.productsLoadError = false;
+    this.productService.getAll(undefined, undefined, this.showInactive).subscribe({
+      next: products => {
+        this.allProducts = products ?? [];
+        this.applyFilter();
+        this.loadingProducts = false;
+      },
+      error: () => {
+        this.loadingProducts = false;
+        this.productsLoadError = true;
+      }
+    });
   }
 
   toggleInactive() {

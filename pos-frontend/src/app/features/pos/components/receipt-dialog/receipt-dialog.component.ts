@@ -114,8 +114,9 @@ import { SaleReceiptData } from '../../../../core/models/print.model';
     </div>
   `,
   styles: [`
-    .receipt-wrapper { padding: 16px; min-width: 360px; }
+    .receipt-wrapper { display:flex; flex-direction:column; box-sizing:border-box; padding: 16px; min-width: min(360px, 92vw); max-height:90vh; min-height:0; overflow:hidden; }
     .receipt-content {
+      flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
       font-family: monospace; font-size: 13px;
       background: #fff; padding: 16px;
       border: 1px solid #eee; border-radius: 8px;
@@ -159,7 +160,7 @@ import { SaleReceiptData } from '../../../../core/models/print.model';
     .footer-line { font-size: 11.5px; color: #555; margin: 2px 0; }
     .footer-site { font-size: 12px; color: #1b3050; font-weight: 600; margin: 2px 0; }
     .receipt-actions {
-      display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end;
+      display: flex; flex:0 0 auto; flex-wrap:wrap; gap: 10px; margin-top: 16px; justify-content: flex-end; background:#fff;
     }
     .new-sale-btn { background: #2e7d32 !important; color: #fff !important; }
   `]

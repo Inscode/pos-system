@@ -21,6 +21,10 @@ public class ManualProduct {
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean active = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

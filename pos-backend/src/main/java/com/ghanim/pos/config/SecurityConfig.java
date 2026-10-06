@@ -65,6 +65,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/demand-products")
                                 .hasAnyRole("OWNER", "CASHIER")
                         .requestMatchers(HttpMethod.DELETE, "/api/demand-products/**").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/manual-products").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/manual-products/**").hasRole("OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/purchase-needs")
                                 .hasAnyRole("OWNER", "CASHIER", "SALESPERSON", "STORE_PERSON")
                         .requestMatchers(HttpMethod.POST, "/api/purchase-needs")

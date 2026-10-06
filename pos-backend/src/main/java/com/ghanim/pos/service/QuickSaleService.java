@@ -91,6 +91,7 @@ public class QuickSaleService {
                     unitPrice = lineTotal.divide(qty, 2, RoundingMode.HALF_UP);
                     manualProduct = manualProductRepository.findByNameIgnoreCase(name).orElse(null);
                     if (manualProduct == null) manualProduct = ManualProduct.builder().name(name).build();
+                    manualProduct.setActive(true);
                     manualProduct.setUnitPrice(unitPrice);
                     manualProduct = manualProductRepository.save(manualProduct);
                 }

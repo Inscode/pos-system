@@ -9,7 +9,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SaleService, QuickSaleService } from '../../../core/services/sale.service';
 import { SalespersonService } from '../../../core/services/product.service';
@@ -32,16 +32,36 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
           <p class="page-sub">{{ selectedDate }}</p>
         </div>
         <div class="header-actions">
-          <select [(ngModel)]="selectedSalespersonId" (change)="applyWorkerFilter()" class="worker-select" aria-label="Filter sales by worker">
-            @if (isOwner) { <option [ngValue]="null">All workers</option> }
-            @else { <option [ngValue]="null">Select worker</option> }
+          <select [(ngModel)]="selectedSalespersonId" class="worker-select" aria-label="Filter sales by worker">
+            <option [ngValue]="null">All workers</option>
             @for (worker of workers; track worker.id) {
               <option [ngValue]="worker.id">{{ worker.name }}</option>
             }
           </select>
           <input type="date" [(ngModel)]="selectedDate" (change)="load()" class="date-input" />
+          <button type="button" class="book-check-btn" (click)="openBookCheck()">
+            <mat-icon>view_column</mat-icon> Book Check
+          </button>
         </div>
       </div>
+
+      @if (isOwner) {
+        <section class="combined-total-card" aria-label="Combined sales total">
+          <div class="combined-total-main">
+            <span class="combined-total-label">Total sales</span>
+            @if (loading || qsLoading) {
+              <span class="combined-total-loading">Updating totals…</span>
+            } @else {
+              <strong>LKR {{ combinedSalesTotal | number:'1.2-2' }}</strong>
+            }
+            <span class="combined-total-caption">Sales and Quick Sales · {{ selectedDate }}</span>
+          </div>
+          <div class="combined-total-breakdown" [class.is-loading]="loading || qsLoading">
+            <div><span>Sales</span><strong>LKR {{ salesTotal | number:'1.2-2' }}</strong></div>
+            <div><span>Quick Sales</span><strong>LKR {{ quickSalesTotal | number:'1.2-2' }}</strong></div>
+          </div>
+        </section>
+      }
 
       <mat-tab-group animationDuration="150ms" class="sales-tabs">
 
@@ -49,7 +69,7 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
         <mat-tab>
           <ng-template mat-tab-label>
             <mat-icon class="tab-icon">receipt_long</mat-icon>
-            Sales <span class="tab-count">{{ filteredSales.length }}</span>
+            Sales <span class="tab-count">{{ activeSales.length }}</span>
           </ng-template>
           <mat-card class="tab-card">
             @if (loading) {
@@ -59,7 +79,7 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
             } @else {
               @if (showTotals) {
                 <div class="sales-total-bar">
-                  <span>{{ filteredSales.length }} sale(s)</span>
+                  <span>{{ activeSales.length }} sale(s)</span>
                   <span class="total-sum">Total: LKR {{ salesTotal | number:'1.2-2' }}</span>
                 </div>
               }
@@ -128,6 +148,21 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
     .header-actions { display: flex; gap: 12px; align-items: center; }
     .date-input { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; font-family: 'Inter', sans-serif; font-size: 14px; }
     .worker-select { border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; font-family: 'Inter', sans-serif; font-size: 14px; background: #fff; min-width: 170px; }
+    .combined-total-card { display:flex; justify-content:space-between; align-items:center; gap:20px; margin:0 0 16px; padding:17px 20px; border:1px solid #dce6f0; border-radius:12px; background:linear-gradient(110deg,#f5f9ff,#fff); box-shadow:0 3px 14px rgba(27,48,80,.045); }
+    .combined-total-main { display:flex; flex-direction:column; gap:3px; }
+    .combined-total-label { color:#64758a; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.45px; }
+    .combined-total-main strong { color:#1b3050; font-size:25px; line-height:1.2; }
+    .combined-total-caption { color:#8995a3; font-size:11px; }
+    .combined-total-loading { color:#64758a; font-size:18px; font-weight:650; }
+    .combined-total-breakdown { display:flex; gap:24px; }
+    .combined-total-breakdown div { display:flex; flex-direction:column; gap:4px; min-width:125px; }
+    .combined-total-breakdown span { color:#8995a3; font-size:11px; }
+    .combined-total-breakdown strong { color:#344a63; font-size:14px; }
+    .combined-total-breakdown.is-loading { opacity:.45; }
+
+    .book-check-btn { display:flex; align-items:center; justify-content:center; gap:6px; height:38px; border:1px solid #d8e0e9; border-radius:7px; padding:0 12px; background:#fff; color:#385976; font-family:inherit; font-size:13px; font-weight:650; cursor:pointer; white-space:nowrap; }
+    .book-check-btn:hover { border-color:#1b4c7e; background:#eef5fc; color:#1b4c7e; }
+    .book-check-btn mat-icon { font-size:18px; width:18px; height:18px; }
 
     .sales-tabs { }
     .tab-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 6px; vertical-align: middle; }
@@ -167,6 +202,13 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
       .page-container { padding: 16px; }
       .page-header { flex-direction: column; gap: 10px; }
       .header-actions { flex-wrap: wrap; }
+      .header-actions { width:100%; }
+      .date-input { min-width:0; flex:1; }
+      .book-check-btn { flex:none; }
+      .combined-total-card { align-items:flex-start; flex-direction:column; gap:12px; padding:15px 16px; }
+      .combined-total-breakdown { width:100%; justify-content:space-between; gap:12px; }
+      .combined-total-breakdown div { min-width:0; }
+      .combined-total-main strong { font-size:22px; }
       .sale-row { flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
       .sale-id { min-width: 0; font-size: 12px; }
       .sale-info { font-size: 12px; }
@@ -200,17 +242,24 @@ export class SalesHistoryComponent implements OnInit {
     if (this.selectedSalespersonId === null) return this.sales;
     return this.sales.filter(s => s.salesperson?.id === this.selectedSalespersonId || s.salespersonId === this.selectedSalespersonId);
   }
+  get activeSales(): any[] {
+    return this.filteredSales.filter(s => s.status?.toUpperCase() !== 'CANCELLED');
+  }
   get filteredQuickSales(): any[] {
     if (this.selectedSalespersonId === null) return this.quickSales;
     return this.quickSales.filter(s => s.salesperson?.id === this.selectedSalespersonId || s.salespersonId === this.selectedSalespersonId);
   }
 
   get salesTotal(): number {
-    return this.filteredSales.reduce((s, x) => s + (x.total ?? 0), 0);
+    return this.activeSales.reduce((s, x) => s + (x.total ?? 0), 0);
   }
 
   get quickSalesTotal(): number {
     return this.filteredQuickSales.reduce((s, x) => s + (x.total ?? 0), 0);
+  }
+
+  get combinedSalesTotal(): number {
+    return this.salesTotal + this.quickSalesTotal;
   }
 
   ngOnInit() {
@@ -218,16 +267,27 @@ export class SalesHistoryComponent implements OnInit {
     this.load();
   }
 
-  applyWorkerFilter() { this.load(); }
+  openBookCheck() {
+    const historyLoaded = !this.loading && !this.qsLoading;
+    this.dialog.open(BookCheckDialogComponent, {
+      width: '1100px',
+      maxWidth: '96vw',
+      data: {
+        date: this.selectedDate,
+        sales: historyLoaded ? this.sales : undefined,
+        quickSales: historyLoaded ? this.quickSales : undefined
+      }
+    });
+  }
 
   load() {
     this.loading = true;
     this.qsLoading = true;
-    this.saleService.getByDate(this.selectedDate, this.selectedSalespersonId).subscribe({
+    this.saleService.getByDate(this.selectedDate).subscribe({
       next: data => { this.sales = data; this.loading = false; },
       error: () => { this.loading = false; }
     });
-    this.quickSaleService.getByDate(this.selectedDate, this.selectedSalespersonId).subscribe({
+    this.quickSaleService.getByDate(this.selectedDate).subscribe({
       next: data => { this.quickSales = data; this.qsLoading = false; },
       error: () => { this.qsLoading = false; }
     });
@@ -255,4 +315,204 @@ export class SalesHistoryComponent implements OnInit {
       });
     });
   }
+}
+
+interface BookCheckEntry {
+  id: number;
+  salespersonId: number | null;
+  salespersonName: string;
+  createdAt: string;
+  total: number;
+  status: string;
+  saleType: string;
+  quickSale: boolean;
+}
+
+interface BookCheckWorker { id: number | null; name: string; }
+
+@Component({
+  selector: 'app-book-check-dialog',
+  standalone: true,
+  imports: [CommonModule, DatePipe, FormsModule, MatButtonModule, MatDialogModule, MatIconModule, MatProgressSpinnerModule],
+  template: `
+    <div class="book-check-dialog">
+      <header class="dialog-header">
+        <div>
+          <h2>Sales book check</h2>
+          <p>Normal and quick sales combined in chronological order</p>
+        </div>
+        <div class="header-actions">
+          <label class="date-field">Date
+            <input type="date" [(ngModel)]="selectedDate" (change)="load()" aria-label="Book check date" />
+          </label>
+          <button mat-icon-button type="button" aria-label="Close book check" (click)="close()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </header>
+
+      <section class="dialog-content">
+        <div *ngIf="salesLoading || quickSalesLoading" class="loading-state"><mat-spinner diameter="30"></mat-spinner> Loading sales…</div>
+        <div *ngIf="!salesLoading && !quickSalesLoading && !bookCheckWorkers.length" class="empty-state">
+          No salespersons or sales found for this date.
+        </div>
+        <div *ngIf="!salesLoading && !quickSalesLoading && bookCheckWorkers.length" class="worker-columns">
+          <article class="worker-column" *ngFor="let worker of bookCheckWorkers; trackBy: trackWorker">
+            <header class="worker-header">
+              <h3>{{ worker.name }}</h3>
+              <ng-container *ngIf="isOwner">
+                <span class="total-label">Total sales</span>
+                <strong class="worker-total">LKR {{ workerTotal(worker.id) | number:'1.2-2' }}</strong>
+              </ng-container>
+            </header>
+            <div class="worker-entries">
+              <div *ngFor="let entry of entriesFor(worker.id); let i = index; trackBy: trackEntry"
+                   class="sale-entry" [class.cancelled-entry]="entry.status.toUpperCase() === 'CANCELLED'">
+                <div class="entry-info">
+                  <span class="entry-number">#{{ i + 1 }}</span>
+                  <span class="entry-kind">{{ entry.quickSale ? 'QUICK SALE' : entry.saleType }}</span>
+                  <span *ngIf="entry.status.toUpperCase() === 'CANCELLED'" class="cancelled-label">CANCELLED</span>
+                </div>
+                <strong class="entry-amount">LKR {{ entry.total | number:'1.2-2' }}</strong>
+              </div>
+              <div *ngIf="!entriesFor(worker.id).length" class="worker-empty">No sales</div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+  `,
+  styles: [`
+    .book-check-dialog { color:#1b3050; }
+    .dialog-header { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px 22px 14px; border-bottom:1px solid #edf0f4; }
+    .dialog-header h2 { margin:0; font-size:18px; font-weight:750; }
+    .dialog-header p { margin:4px 0 0; color:#8995a3; font-size:12px; }
+    .header-actions { display:flex; align-items:center; gap:10px; }
+    .date-field { display:flex; align-items:center; gap:8px; color:#64758a; font-size:11px; font-weight:700; }
+    .date-field input { height:36px; border:1px solid #d8e0e9; border-radius:7px; padding:0 9px; color:#34445a; font:inherit; }
+    .dialog-content { display:block; box-sizing:border-box; min-height:180px; max-height:75vh; overflow:auto; overscroll-behavior:contain; padding:14px 18px 20px; }
+    .worker-columns { display:flex; align-items:stretch; gap:12px; max-height:65vh; overflow-x:auto; overflow-y:hidden; padding-bottom:8px; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; }
+    .worker-column { display:flex; flex:0 0 245px; flex-direction:column; height:min(65vh, 640px); min-height:180px; max-height:65vh; overflow:hidden; border:1px solid #e6ecf2; border-radius:9px; background:#fcfdff; }
+    .worker-header { padding:12px 13px 10px; border-bottom:1px solid #e8edf3; background:#f5f8fc; }
+    .worker-header h3 { overflow:hidden; margin:0 0 8px; color:#263d58; font-size:14px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+    .total-label { display:block; color:#8290a1; font-size:10px; }
+    .worker-total { display:block; margin-top:2px; color:#1b3050; font-size:17px; }
+    .worker-entries { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding:8px; }
+    .sale-entry { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px; padding:9px 8px; border:1px solid #e9eef4; border-radius:7px; background:#fff; }
+    .entry-info { display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; min-width:0; }
+    .entry-number { color:#334a63; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+    .entry-kind { color:#64758a; font-size:9px; font-weight:700; }
+    .cancelled-label { color:#b42318; font-size:9px; font-weight:750; }
+    .entry-amount { flex:none; color:#1b3050; font-size:12px; white-space:nowrap; }
+    .cancelled-entry { opacity:.6; background:#fffafa; }
+    .cancelled-entry .entry-amount { color:#8c969f; text-decoration:line-through; }
+    .worker-empty, .empty-state { padding:26px 12px; color:#97a2af; font-size:12px; text-align:center; }
+    .loading-state { display:flex; align-items:center; justify-content:center; gap:10px; min-height:160px; color:#748195; font-size:13px; }
+    @media (max-width:600px) {
+      .dialog-header { align-items:flex-start; flex-direction:column; padding:16px; }
+      .header-actions { width:100%; justify-content:space-between; }
+      .dialog-content { padding:12px; }
+    }
+  `]
+})
+export class BookCheckDialogComponent implements OnInit {
+  readonly data: { date: string; sales?: any[]; quickSales?: any[] } = inject(MAT_DIALOG_DATA);
+  private dialogRef = inject(MatDialogRef<BookCheckDialogComponent>);
+  private saleService = inject(SaleService);
+  private quickSaleService = inject(QuickSaleService);
+  private salespersonService = inject(SalespersonService);
+  private auth = inject(AuthService);
+
+  selectedDate = this.data.date;
+  sales: any[] = this.data.sales ?? [];
+  quickSales: any[] = this.data.quickSales ?? [];
+  activeWorkers: { id: number; name: string }[] = [];
+  salesLoading = false;
+  quickSalesLoading = false;
+  workersLoading = true;
+  private loadVersion = 0;
+
+  get isOwner(): boolean { return this.auth.isOwner(); }
+
+  get entries(): BookCheckEntry[] {
+    const normalSales: BookCheckEntry[] = this.sales.map(sale => ({
+      id: sale.id,
+      salespersonId: sale.salesperson?.id ?? sale.salespersonId ?? null,
+      salespersonName: sale.salesperson?.name ?? 'Unassigned',
+      createdAt: sale.createdAt ?? '',
+      total: Number(sale.total) || 0,
+      status: sale.status ?? 'COMPLETED',
+      saleType: sale.saleType ?? 'SALE',
+      quickSale: false
+    }));
+    const quickSales: BookCheckEntry[] = this.quickSales.map(sale => ({
+      id: sale.id,
+      salespersonId: sale.salesperson?.id ?? sale.salespersonId ?? null,
+      salespersonName: sale.salesperson?.name ?? 'Unassigned',
+      createdAt: sale.createdAt ?? '',
+      total: Number(sale.total) || 0,
+      status: 'COMPLETED',
+      saleType: 'QUICK SALE',
+      quickSale: true
+    }));
+    return [...normalSales, ...quickSales].sort((a, b) => {
+      const aTime = Date.parse(a.createdAt) || 0;
+      const bTime = Date.parse(b.createdAt) || 0;
+      return aTime - bTime || Number(a.quickSale) - Number(b.quickSale) || a.id - b.id;
+    });
+  }
+
+  get bookCheckWorkers(): BookCheckWorker[] {
+    const byId = new Map<number, BookCheckWorker>();
+    this.activeWorkers.forEach(worker => byId.set(worker.id, { id: worker.id, name: worker.name }));
+    for (const entry of this.entries) {
+      if (entry.salespersonId !== null && !byId.has(entry.salespersonId)) {
+        byId.set(entry.salespersonId, { id: entry.salespersonId, name: entry.salespersonName });
+      }
+    }
+    const workers = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+    if (this.entries.some(entry => entry.salespersonId === null)) workers.push({ id: null, name: 'Unassigned' });
+    return workers;
+  }
+
+  trackWorker(_index: number, worker: BookCheckWorker): number | string {
+    return worker.id ?? 'unassigned';
+  }
+
+  trackEntry(_index: number, entry: BookCheckEntry): string {
+    return `${entry.quickSale ? 'q' : 's'}${entry.id}`;
+  }
+
+  ngOnInit() {
+    this.salespersonService.getAll().subscribe({
+      next: workers => { this.activeWorkers = workers.filter(worker => worker.active); this.workersLoading = false; },
+      error: () => { this.activeWorkers = []; this.workersLoading = false; }
+    });
+    if (!Array.isArray(this.data.sales) || !Array.isArray(this.data.quickSales)) this.load();
+  }
+
+  load() {
+    const version = ++this.loadVersion;
+    this.salesLoading = true;
+    this.quickSalesLoading = true;
+    this.saleService.getByDate(this.selectedDate).subscribe({
+      next: sales => { if (version === this.loadVersion) { this.sales = sales; this.salesLoading = false; } },
+      error: () => { if (version === this.loadVersion) { this.sales = []; this.salesLoading = false; } }
+    });
+    this.quickSaleService.getByDate(this.selectedDate).subscribe({
+      next: sales => { if (version === this.loadVersion) { this.quickSales = sales; this.quickSalesLoading = false; } },
+      error: () => { if (version === this.loadVersion) { this.quickSales = []; this.quickSalesLoading = false; } }
+    });
+  }
+
+  entriesFor(workerId: number | null): BookCheckEntry[] {
+    return this.entries.filter(entry => entry.salespersonId === workerId);
+  }
+
+  workerTotal(workerId: number | null): number {
+    return this.entriesFor(workerId)
+      .reduce((sum, entry) => entry.status.toUpperCase() === 'CANCELLED' ? sum : sum + entry.total, 0);
+  }
+
+  close() { this.dialogRef.close(); }
 }

@@ -65,6 +65,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/demand-products")
                                 .hasAnyRole("OWNER", "CASHIER")
                         .requestMatchers(HttpMethod.DELETE, "/api/demand-products/**").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/manual-products").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/manual-products/**").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/purchase-needs")
+                                .hasAnyRole("OWNER", "CASHIER", "SALESPERSON", "STORE_PERSON")
+                        .requestMatchers(HttpMethod.POST, "/api/purchase-needs")
+                                .hasAnyRole("OWNER", "CASHIER", "SALESPERSON", "STORE_PERSON")
+                        .requestMatchers(HttpMethod.PATCH, "/api/purchase-needs/*/status",
+                                "/api/purchase-needs/*/category").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/purchase-needs/*/re-request")
+                                .hasAnyRole("OWNER", "SALESPERSON")
+                        .requestMatchers(HttpMethod.PATCH, "/api/purchase-needs/*/store-status")
+                                .hasAnyRole("OWNER", "STORE_PERSON")
+                        .requestMatchers(HttpMethod.DELETE, "/api/purchase-needs/**").hasRole("OWNER")
                         .requestMatchers(HttpMethod.POST,
                                 "/api/categories",
                                 "/api/suppliers",

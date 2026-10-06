@@ -24,7 +24,7 @@ import { HeldSale } from '../../../../core/models/sale.model';
             <div class="held-info">
               <div class="held-note">{{ sale.note || 'No note' }}</div>
               <div class="held-meta">
-                {{ sale.saleType }} · {{ sale.createdAt | date:'HH:mm' }}
+                {{ sale.saleType }} · {{ sale.createdAt | date:'HH:mm':'+0530' }}
                 @if (sale.customerName) { · {{ sale.customerName }} }
               </div>
             </div>

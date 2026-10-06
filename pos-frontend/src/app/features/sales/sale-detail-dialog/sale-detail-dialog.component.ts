@@ -15,6 +15,7 @@ import { PrintService } from '../../../core/services/print.service';
     MatSnackBarModule, MatProgressSpinnerModule, CancelSaleDialogComponent],
   template: `
     <div class="detail-wrap">
+      <div class="detail-content">
       <div class="detail-header">
         <div>
           <h2>Sale #{{ sale.id }}</h2>
@@ -72,6 +73,7 @@ import { PrintService } from '../../../core/services/print.service';
           <div class="total-row"><span>Change</span><span>LKR {{ sale.changeAmount | number:'1.2-2' }}</span></div>
         }
       </div>
+      </div>
 
       <div mat-dialog-actions class="detail-actions">
         <button mat-button (click)="dialogRef.close()">CLOSE</button>
@@ -90,7 +92,8 @@ import { PrintService } from '../../../core/services/print.service';
     </div>
   `,
   styles: [`
-    .detail-wrap { min-width: 460px; padding: 20px 24px; }
+    .detail-wrap { display:flex; flex-direction:column; min-width:min(460px, 92vw); max-height:90vh; padding:20px 24px; box-sizing:border-box; overflow:hidden; }
+    .detail-content { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
     .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
     h2 { font-size: 20px; font-weight: 700; color: #1b3050; margin: 0; }
     .sub { font-size: 12px; color: #888; margin: 4px 0 0; }
@@ -115,7 +118,7 @@ import { PrintService } from '../../../core/services/print.service';
     .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
     .total-row.disc { color: #c62828; }
     .total-row.grand { font-weight: 700; font-size: 16px; color: #1b3050; border-top: 1px solid #eee; margin-top: 4px; padding-top: 8px; }
-    .detail-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 16px; }
+    .detail-actions { display: flex; flex:0 0 auto; gap: 8px; justify-content: flex-end; padding-top: 16px; background:#fff; }
     .cancel-btn { color: #c62828 !important; border-color: #c62828 !important; }
   `]
 })

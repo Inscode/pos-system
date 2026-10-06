@@ -1,0 +1,2 @@
+ALTER TABLE pos.manual_products
+    ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE;

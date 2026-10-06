@@ -5,7 +5,7 @@ A full-stack POS system for retail shops. Handles retail & wholesale sales, inve
 ---
 
 ## Tech Stack
-
+  
 | Layer | Technology |
 |---|---|
 | Frontend | Angular 17, Angular Material, SCSS |

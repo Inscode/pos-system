@@ -340,7 +340,7 @@ export class SidebarComponent {
     { label: 'Shop Supplies',icon: 'shopping_bag',           route: '/shop-supplies',      roles: ['OWNER', 'CASHIER'] },
     { label: 'Demand Products',icon: 'how_to_vote',           route: '/demand-products',    roles: ['OWNER', 'CASHIER'] },
     // SALESPERSON route
-    { label: 'Needs List',   icon: 'checklist',              route: '/needs',              roles: ['OWNER', 'SALESPERSON'] },
+    { label: 'Needs List',   icon: 'checklist',              route: '/needs',              roles: ['OWNER', 'SALESPERSON', 'CASHIER'] },
     // STORE_PERSON route
     { label: 'Store Needs',  icon: 'warehouse',              route: '/store-needs',        roles: ['OWNER', 'STORE_PERSON'] },
     { label: 'Settings',     icon: 'settings',               route: '/settings',           roles: ['OWNER'] },

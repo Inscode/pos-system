@@ -73,8 +73,13 @@ export interface SlowStockItem {
 export interface CashFlowDay {
   date: string;
   salesCount: number;
+  quickSaleCount: number;
   revenue: number;
   cashRevenue: number;
+  quickSaleCash: number;
+  cashIn: number;
+  cashOut: number;
+  cashRefunds: number;
   expenses: number;
   net: number;
 }

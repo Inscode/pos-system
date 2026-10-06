@@ -13,6 +13,14 @@ import {
   DailyReport, RangeReport, ProductStat, ManualItemStat, SlowStockItem, CashFlowDay
 } from '../../../core/models/report.model';
 
+function colomboToday(): string {
+  const p = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Colombo', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(p.map(part => [part.type, part.value]));
+  return `${values['year']}-${values['month']}-${values['day']}`;
+}
+
 @Component({
   selector: 'app-daily-report',
   standalone: true,
@@ -340,7 +348,7 @@ import {
             @else if (cashFlow.length > 0) {
               <!-- Totals -->
               <div class="stat-grid">
-                <mat-card class="stat-card navy"><div class="sl">Cash Revenue</div><div class="sv sm">Rs {{ cfTotalCashRev | number:'1.0-0' }}</div></mat-card>
+                <mat-card class="stat-card navy"><div class="sl">Cash Receipts</div><div class="sv sm">Rs {{ cfTotalCashRev | number:'1.0-0' }}</div></mat-card>
                 <mat-card class="stat-card red-card"><div class="sl">Total Expenses</div><div class="sv sm">Rs {{ cfTotalExp | number:'1.0-0' }}</div></mat-card>
                 <mat-card class="stat-card" [class.green]="cfNet >= 0" [class.red-card]="cfNet < 0">
                   <div class="sl">Net Cash</div>
@@ -350,10 +358,15 @@ import {
 
               <mat-card class="table-card">
                 <div class="card-title">Daily Cash Flow</div>
-                <table mat-table [dataSource]="cashFlow" class="rep-table">
+                <div class="cash-flow-table-wrap"><table mat-table [dataSource]="cashFlow" class="rep-table">
                   <ng-container matColumnDef="date"><th mat-header-cell *matHeaderCellDef>Date</th><td mat-cell *matCellDef="let r">{{ r.date }}</td></ng-container>
                   <ng-container matColumnDef="salesCount"><th mat-header-cell *matHeaderCellDef>Sales</th><td mat-cell *matCellDef="let r">{{ r.salesCount }}</td></ng-container>
-                  <ng-container matColumnDef="cashRevenue"><th mat-header-cell *matHeaderCellDef>Cash Revenue</th><td mat-cell *matCellDef="let r">Rs {{ r.cashRevenue | number:'1.0-0' }}</td></ng-container>
+                  <ng-container matColumnDef="quickSaleCount"><th mat-header-cell *matHeaderCellDef>Quick Sales</th><td mat-cell *matCellDef="let r">{{ r.quickSaleCount }}</td></ng-container>
+                  <ng-container matColumnDef="cashRevenue"><th mat-header-cell *matHeaderCellDef>Sales Cash</th><td mat-cell *matCellDef="let r">Rs {{ r.cashRevenue | number:'1.0-0' }}</td></ng-container>
+                  <ng-container matColumnDef="quickSaleCash"><th mat-header-cell *matHeaderCellDef>Quick Sale Cash</th><td mat-cell *matCellDef="let r">Rs {{ r.quickSaleCash | number:'1.0-0' }}</td></ng-container>
+                  <ng-container matColumnDef="cashIn"><th mat-header-cell *matHeaderCellDef>Cash In</th><td mat-cell *matCellDef="let r">Rs {{ r.cashIn | number:'1.0-0' }}</td></ng-container>
+                  <ng-container matColumnDef="cashOut"><th mat-header-cell *matHeaderCellDef>Cash Out</th><td mat-cell *matCellDef="let r" class="red">Rs {{ r.cashOut | number:'1.0-0' }}</td></ng-container>
+                  <ng-container matColumnDef="cashRefunds"><th mat-header-cell *matHeaderCellDef>Refunds</th><td mat-cell *matCellDef="let r" class="red">Rs {{ r.cashRefunds | number:'1.0-0' }}</td></ng-container>
                   <ng-container matColumnDef="expenses"><th mat-header-cell *matHeaderCellDef>Expenses</th><td mat-cell *matCellDef="let r" class="red">Rs {{ r.expenses | number:'1.0-0' }}</td></ng-container>
                   <ng-container matColumnDef="net"><th mat-header-cell *matHeaderCellDef>Net</th>
                     <td mat-cell *matCellDef="let r" [class.green-text]="r.net >= 0" [class.red]="r.net < 0">
@@ -362,7 +375,7 @@ import {
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="cfCols"></tr>
                   <tr mat-row *matRowDef="let r; columns: cfCols;"></tr>
-                </table>
+                </table></div>
               </mat-card>
             } @else if (!cfLoading) {
               <div class="empty-hint">Select a date range and click Run.</div>
@@ -411,6 +424,7 @@ import {
     .row-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .half-card { padding: 0 !important; overflow: hidden; }
     .table-card { padding: 0 !important; overflow: hidden; }
+    .cash-flow-table-wrap { max-width: 100%; overflow-x: auto; }
     .card-title { font-size: 14px; font-weight: 700; color: #1b3050; padding: 14px 16px 10px; }
 
     /* Info rows */
@@ -477,19 +491,19 @@ export class DailyReportComponent implements OnInit {
   private reportService = inject(ReportService);
 
   // Daily
-  dailyDate = new Date().toISOString().split('T')[0];
+  dailyDate = colomboToday();
   daily: DailyReport | null = null;
   dailyLoading = false;
 
   // Range
   rangeFrom = this.monthStart();
-  rangeTo = new Date().toISOString().split('T')[0];
+  rangeTo = colomboToday();
   range: RangeReport | null = null;
   rangeLoading = false;
 
   // Products
   prodFrom = this.monthStart();
-  prodTo = new Date().toISOString().split('T')[0];
+  prodTo = colomboToday();
   products: ProductStat[] = [];
   manualItems: ManualItemStat[] = [];
   productReportMode: 'PRODUCTS' | 'MANUAL' = 'PRODUCTS';
@@ -497,7 +511,7 @@ export class DailyReportComponent implements OnInit {
 
   // Top
   topFrom = this.monthStart();
-  topTo = new Date().toISOString().split('T')[0];
+  topTo = colomboToday();
   topProducts: ProductStat[] = [];
   topLoading = false;
 
@@ -508,7 +522,7 @@ export class DailyReportComponent implements OnInit {
 
   // Cash flow
   cfFrom = this.monthStart();
-  cfTo = new Date().toISOString().split('T')[0];
+  cfTo = colomboToday();
   cashFlow: CashFlowDay[] = [];
   cfLoading = false;
 
@@ -517,7 +531,7 @@ export class DailyReportComponent implements OnInit {
   prodCols = ['productName', 'category', 'qtySold', 'revenue', 'profit', 'margin'];
   manualProdCols = ['productName', 'qtySold', 'revenue'];
   slowCols = ['productName', 'category', 'stockQuantity', 'qtySoldInPeriod'];
-  cfCols = ['date', 'salesCount', 'cashRevenue', 'expenses', 'net'];
+  cfCols = ['date', 'salesCount', 'quickSaleCount', 'cashRevenue', 'quickSaleCash', 'cashIn', 'cashOut', 'cashRefunds', 'expenses', 'net'];
 
   get prodTotalRevenue() { return this.products.reduce((s, p) => s + p.revenue, 0); }
   get prodTotalProfit() { return this.products.reduce((s, p) => s + p.profit, 0); }
@@ -527,13 +541,14 @@ export class DailyReportComponent implements OnInit {
   }
   get manualItemTotalQty() { return this.manualItems.reduce((sum, item) => sum + item.qtySold, 0); }
   get manualItemTotalRevenue() { return this.manualItems.reduce((sum, item) => sum + item.revenue, 0); }
-  get cfTotalCashRev() { return this.cashFlow.reduce((s, d) => s + d.cashRevenue, 0); }
+  get cfTotalCashRev() { return this.cashFlow.reduce((s, d) => s + d.cashRevenue + d.quickSaleCash, 0); }
   get cfTotalExp() { return this.cashFlow.reduce((s, d) => s + d.expenses, 0); }
   get cfNet() { return this.cashFlow.reduce((s, d) => s + d.net, 0); }
 
   private readonly reasonLabels: Record<string, string> = {
     CHARITY: 'Charity', SHOP_EXPENSE: 'Shop Expense', TRANSPORT: 'Transport',
-    CLEANING: 'Cleaning', FOOD: 'Food', SUPPLIER: 'Supplier Payment', OTHER: 'Other'
+    CLEANING: 'Cleaning', FOOD: 'Food', SUPPLIER: 'Supplier Payment', OTHER: 'Other',
+    OWNER_WITHDRAWAL: 'Owner Withdrawal (not an expense)', CASH_TRANSFER: 'Cash Transfer (not an expense)'
   };
 
   reasonLabel(key: string) { return this.reasonLabels[key] ?? key; }
@@ -542,8 +557,7 @@ export class DailyReportComponent implements OnInit {
   }
 
   private monthStart() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    return `${colomboToday().substring(0, 7)}-01`;
   }
 
   printPage() { window.print(); }

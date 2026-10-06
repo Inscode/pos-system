@@ -102,7 +102,7 @@ import { SaleReceiptData } from '../../../../core/models/print.model';
         <button mat-stroked-button (click)="dialogRef.close()">
           <mat-icon>close</mat-icon> CLOSE
         </button>
-        <button mat-stroked-button (click)="printReceipt()" [disabled]="printing">
+        <button mat-stroked-button (click)="printReceipt()" [disabled]="printing || drawerOpening">
           @if (printing) { <mat-spinner diameter="16" /> }
           @else { <mat-icon>print</mat-icon> }
           PRINT RECEIPT
@@ -172,8 +172,19 @@ export class ReceiptDialogComponent implements OnInit {
   private snack = inject(MatSnackBar);
 
   printing = false;
+  drawerOpening = false;
 
   ngOnInit() {
+    if (this.data._openDrawerOnEntry && this.data.receipt?.paymentMethod === 'CASH') {
+      this.drawerOpening = true;
+      this.printService.openDrawer()
+        .catch(() => this.snack.open('Sale saved, but the drawer did not open. Use Open Drawer in Settings.', 'OK', { duration: 5000 }))
+        .finally(() => {
+          this.drawerOpening = false;
+          if (this.data._autoPrint) this.printReceipt();
+        });
+      return;
+    }
     if (this.data._autoPrint) {
       this.printReceipt();
     }

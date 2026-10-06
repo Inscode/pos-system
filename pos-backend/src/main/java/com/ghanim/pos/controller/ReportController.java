@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +22,7 @@ public class ReportController {
     @GetMapping("/daily")
     public ResponseEntity<ApiResponse<Map<String, Object>>> daily(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        if (date == null) date = LocalDate.now();
+        if (date == null) date = LocalDate.now(ZoneId.of("Asia/Colombo"));
         return ResponseEntity.ok(ApiResponse.ok(reportService.getDailyReport(date)));
     }
 

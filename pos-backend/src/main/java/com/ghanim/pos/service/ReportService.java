@@ -89,10 +89,11 @@ public class ReportService {
         totalAmount = totalAmount.subtract(totalRefunds);
         totalProfit = totalProfit.subtract(returnedProfit);
 
-        Optional<Session> currentSession = sessionRepository.findFirstByStatusOrderByOpenedAtDesc("OPEN");
-        BigDecimal openingFloat = currentSession.map(Session::getOpeningFloat).orElse(BigDecimal.ZERO);
-        List<CashMovement> movements = currentSession
-                .map(s -> cashMovementRepository.findBySessionId(s.getId())).orElse(List.of());
+        BigDecimal openingFloat = sessionRepository.findAllByOrderByOpenedAtDesc().stream()
+                .filter(s -> s.getOpenedAt() != null && s.getOpenedAt().toLocalDate().equals(date))
+                .map(s -> s.getOpeningFloat() != null ? s.getOpeningFloat() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<CashMovement> movements = cashMovementRepository.findByCreatedAtBetween(from, to);
         BigDecimal cashIn = movements.stream().filter(m -> "CASH_IN".equals(m.getType()))
                 .map(CashMovement::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal cashOut = movements.stream().filter(m -> "CASH_OUT".equals(m.getType()))
@@ -322,21 +323,41 @@ public class ReportService {
                     .filter(s -> "CASH".equals(s.getPaymentMethod()))
                     .map(Sale::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
 
+            BigDecimal quickSaleCash = quickSaleRepository.sumCashBetween(dayStart, dayEnd);
+            long quickSaleCount = quickSaleRepository.countByCreatedAtBetween(dayStart, dayEnd);
+            List<CashMovement> movements = cashMovementRepository.findByCreatedAtBetween(dayStart, dayEnd);
+            BigDecimal cashIn = sumMovements(movements, "CASH_IN");
+            BigDecimal cashOut = sumMovements(movements, "CASH_OUT");
+            BigDecimal cashRefunds = sumMovements(movements, "REFUND");
+
             List<com.ghanim.pos.entity.Expense> expenses = expenseRepository.findByExpenseDateOrderByCreatedAtDesc(cursor);
             BigDecimal totalExpenses = expenses.stream()
                     .map(com.ghanim.pos.entity.Expense::getAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal unlinkedExpenses = expenseRepository.findByExpenseDateAndCashMovementIdIsNull(cursor).stream()
+                    .map(Expense::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
 
             Map<String, Object> day = new LinkedHashMap<>();
             day.put("date", cursor.toString());
             day.put("salesCount", daySales.size());
+            day.put("quickSaleCount", quickSaleCount);
             day.put("revenue", revenue);
             day.put("cashRevenue", cashRevenue);
+            day.put("quickSaleCash", quickSaleCash);
+            day.put("cashIn", cashIn);
+            day.put("cashOut", cashOut);
+            day.put("cashRefunds", cashRefunds);
             day.put("expenses", totalExpenses);
-            day.put("net", cashRevenue.subtract(totalExpenses));
+            day.put("net", cashRevenue.add(quickSaleCash).add(cashIn)
+                    .subtract(cashOut).subtract(cashRefunds).subtract(unlinkedExpenses));
             result.add(day);
             cursor = cursor.plusDays(1);
         }
         return result;
+    }
+
+    private BigDecimal sumMovements(List<CashMovement> movements, String type) {
+        return movements.stream().filter(m -> type.equals(m.getType()))
+                .map(CashMovement::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

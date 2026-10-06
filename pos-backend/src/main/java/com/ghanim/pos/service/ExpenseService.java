@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,6 +28,21 @@ public class ExpenseService {
 
     @Transactional
     public Expense create(ExpenseRequest req) {
+        return create(req, null);
+    }
+
+    @Transactional
+    public Expense createFromCashMovement(ExpenseRequest req, Long cashMovementId) {
+        return create(req, cashMovementId);
+    }
+
+    private Expense create(ExpenseRequest req, Long cashMovementId) {
+        if (req.getCategory() == null || req.getAmount() == null || req.getAmount().signum() <= 0) {
+            throw new IllegalArgumentException("A valid expense category and positive amount are required");
+        }
+        if (req.getCategory() == Expense.Category.SUPPLIER_PAYMENT && req.getSupplierId() == null) {
+            throw new IllegalArgumentException("Select a supplier for a supplier payment");
+        }
         Supplier supplier = null;
         if (req.getSupplierId() != null) {
             supplier = supplierRepository.findById(req.getSupplierId())
@@ -50,7 +66,8 @@ public class ExpenseService {
                 .note(req.getNote())
                 .supplier(supplier)
                 .salesperson(salesperson)
-                .expenseDate(req.getExpenseDate() != null ? req.getExpenseDate() : LocalDate.now())
+                .expenseDate(req.getExpenseDate() != null ? req.getExpenseDate() : LocalDate.now(ZoneId.of("Asia/Colombo")))
+                .cashMovementId(cashMovementId)
                 .build();
 
         return expenseRepository.save(expense);
@@ -92,6 +109,10 @@ public class ExpenseService {
     public void delete(Long id) {
         Expense expense = expenseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
+
+        if (expense.getCashMovementId() != null) {
+            throw new IllegalArgumentException("This expense was created from Cash Out and cannot be deleted separately");
+        }
 
         if (expense.getCategory() == Expense.Category.SUPPLIER_PAYMENT && expense.getSupplier() != null) {
             Supplier supplier = expense.getSupplier();

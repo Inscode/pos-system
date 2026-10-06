@@ -8,7 +8,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CashService } from '../../../../core/services/session.service';
+import { PrintService } from '../../../../core/services/print.service';
+import { SupplierService } from '../../../../core/services/product.service';
+import { Supplier } from '../../../../core/models/product.model';
 
 const OUT_REASONS = [
   { value: 'CHARITY',      label: 'Charity' },
@@ -18,6 +22,8 @@ const OUT_REASONS = [
   { value: 'FOOD',         label: 'Food' },
   { value: 'SUPPLIER',     label: 'Supplier Payment' },
   { value: 'OTHER',        label: 'Other' },
+  { value: 'OWNER_WITHDRAWAL', label: 'Owner Withdrawal (not an expense)' },
+  { value: 'CASH_TRANSFER', label: 'Cash Transfer (not an expense)' },
 ];
 
 const IN_REASONS = [
@@ -29,7 +35,7 @@ const IN_REASONS = [
   selector: 'app-cash-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressSpinnerModule, MatIconModule],
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatProgressSpinnerModule, MatIconModule, MatSnackBarModule],
   template: `
     <div class="cash-wrap">
       <div class="cash-header" [class.out]="isCashOut">
@@ -52,6 +58,17 @@ const IN_REASONS = [
           </mat-select>
         </mat-form-field>
 
+        @if (isCashOut && reason === 'SUPPLIER') {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Supplier *</mat-label>
+            <mat-select [(ngModel)]="supplierId">
+              @for (supplier of suppliers; track supplier.id) {
+                <mat-option [value]="supplier.id">{{ supplier.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Notes (optional)</mat-label>
           <input matInput [(ngModel)]="notes" placeholder="e.g. paid to Ahmad for delivery" />
@@ -61,7 +78,7 @@ const IN_REASONS = [
       <mat-dialog-actions align="end">
         <button mat-button (click)="dialogRef.close()">CANCEL</button>
         <button mat-flat-button [class]="isCashOut ? 'out-btn' : 'in-btn'"
-          (click)="confirm()" [disabled]="!amount || amount <= 0 || !reason || loading">
+          (click)="confirm()" [disabled]="!amount || amount <= 0 || !reason || (reason === 'SUPPLIER' && !supplierId) || loading">
           @if (loading) { <mat-spinner diameter="18" /> }
           @else { CONFIRM {{ isCashOut ? 'CASH OUT' : 'CASH IN' }} }
         </button>
@@ -89,6 +106,9 @@ export class CashDialogComponent {
   dialogRef = inject(MatDialogRef<CashDialogComponent>);
   data: { type: 'IN' | 'OUT'; sessionId: number } = inject(MAT_DIALOG_DATA);
   private cashService = inject(CashService);
+  private printService = inject(PrintService);
+  private snack = inject(MatSnackBar);
+  private supplierService = inject(SupplierService);
 
   get isCashOut() { return this.data.type === 'OUT'; }
   reasons = this.isCashOut ? OUT_REASONS : IN_REASONS;
@@ -97,16 +117,29 @@ export class CashDialogComponent {
   reason = '';
   notes = '';
   loading = false;
+  suppliers: Supplier[] = [];
+  supplierId?: number;
+
+  constructor() {
+    if (this.isCashOut) {
+      this.supplierService.getAll().subscribe({ next: suppliers => this.suppliers = suppliers.filter(s => s.active) });
+    }
+  }
 
   confirm() {
     if (!this.amount) return;
     this.loading = true;
     const obs = this.isCashOut
-      ? this.cashService.cashOut(this.data.sessionId, this.amount, this.reason, this.notes)
+      ? this.cashService.cashOut(this.data.sessionId, this.amount, this.reason, this.notes, this.supplierId)
       : this.cashService.cashIn(this.data.sessionId, this.amount, this.reason, this.notes);
 
     obs.subscribe({
-      next: () => this.dialogRef.close(true),
+      next: () => {
+        this.dialogRef.close(true);
+        this.printService.openDrawer().catch(() => this.snack.open(
+          'Cash movement saved, but the drawer did not open. Use Open Drawer in Settings.', 'OK', { duration: 5000 }
+        ));
+      },
       error: () => { this.loading = false; }
     });
   }

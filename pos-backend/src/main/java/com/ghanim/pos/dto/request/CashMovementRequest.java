@@ -15,4 +15,5 @@ public class CashMovementRequest {
     private BigDecimal amount;
     private String reason;
     private String notes;
+    private Long supplierId;
 }

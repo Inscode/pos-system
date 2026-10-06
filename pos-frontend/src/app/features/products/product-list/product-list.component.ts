@@ -38,11 +38,25 @@ import { QuickSaleService, ManualQuickProduct } from '../../../core/services/sal
           <h1 class="page-title">Products</h1>
           <p class="page-sub">Manage shop inventory <span class="catalog-count">{{ allProducts.length }} product types entered</span></p>
         </div>
-        <button mat-flat-button class="primary-btn" (click)="openForm()">
-          <mat-icon>add</mat-icon> Add Product
-        </button>
+        @if (!isOwner || selectedProductsTab === 'stock') {
+          <button mat-flat-button class="primary-btn" (click)="openForm()">
+            <mat-icon>add</mat-icon> Add Product
+          </button>
+        }
       </div>
 
+      @if (isOwner) {
+        <nav class="products-tabs" aria-label="Product views">
+          <button type="button" [class.selected]="selectedProductsTab === 'stock'" [attr.aria-pressed]="selectedProductsTab === 'stock'" (click)="selectedProductsTab = 'stock'">
+            <mat-icon>inventory_2</mat-icon> Stock Products <span>{{ allProducts.length }}</span>
+          </button>
+          <button type="button" [class.selected]="selectedProductsTab === 'quick'" [attr.aria-pressed]="selectedProductsTab === 'quick'" (click)="selectedProductsTab = 'quick'">
+            <mat-icon>flash_on</mat-icon> Quick Sale Products <span>{{ manualProducts.length }}</span>
+          </button>
+        </nav>
+      }
+
+      @if (!isOwner || selectedProductsTab === 'stock') {
       <mat-card class="filter-card">
         <div class="filter-row">
           <mat-form-field appearance="outline" class="search-field">
@@ -67,9 +81,10 @@ import { QuickSaleService, ManualQuickProduct } from '../../../core/services/sal
           }
         </div>
       </mat-card>
+      }
 
       <!-- Pending stock requests — owner only -->
-      @if (isOwner && pendingRequests.length > 0) {
+      @if (isOwner && selectedProductsTab === 'stock' && pendingRequests.length > 0) {
         <mat-card class="requests-card">
           <div class="req-header">
             <div class="req-title"><mat-icon>pending_actions</mat-icon> Pending Stock Requests ({{ pendingRequests.length }})</div>
@@ -100,7 +115,7 @@ import { QuickSaleService, ManualQuickProduct } from '../../../core/services/sal
         </mat-card>
       }
 
-      @if (isOwner) {
+      @if (isOwner && selectedProductsTab === 'quick') {
         <mat-card class="quick-products-card">
           <div class="quick-products-header">
             <div class="quick-products-title">
@@ -156,6 +171,7 @@ import { QuickSaleService, ManualQuickProduct } from '../../../core/services/sal
         </mat-card>
       }
 
+      @if (!isOwner || selectedProductsTab === 'stock') {
       <mat-card>
         @if (loadingProducts) {
           <div class="products-loading" role="status" aria-live="polite">
@@ -302,6 +318,7 @@ import { QuickSaleService, ManualQuickProduct } from '../../../core/services/sal
         }
         }
       </mat-card>
+      }
     </div>
   `,
   styles: [`
@@ -310,6 +327,13 @@ import { QuickSaleService, ManualQuickProduct } from '../../../core/services/sal
     .page-title { font-size: 22px; font-weight: 700; color: #1b3050; }
     .page-sub { color: #6b7280; font-size: 13px; }
     .catalog-count { display:inline-flex; align-items:center; margin-left:8px; padding:3px 8px; border-radius:12px; background:#eef4fb; color:#385976; font-size:11px; font-weight:650; white-space:nowrap; }
+    .products-tabs { display:flex; gap:6px; margin:0 0 16px; padding:0 4px; border-bottom:1px solid #dfe6ee; }
+    .products-tabs button { display:flex; align-items:center; gap:8px; padding:11px 15px; border:0; border-bottom:3px solid transparent; margin-bottom:-1px; background:transparent; color:#748195; font:inherit; font-size:13px; font-weight:650; cursor:pointer; transition:color .15s,border-color .15s; }
+    .products-tabs button:hover { color:#1b3050; }
+    .products-tabs button.selected { border-bottom-color:#1b4c7e; color:#1b3050; }
+    .products-tabs mat-icon { width:18px; height:18px; font-size:18px; }
+    .products-tabs span { min-width:20px; padding:2px 6px; border-radius:10px; background:#eef2f7; color:#65758a; font-size:10px; text-align:center; }
+    .products-tabs button.selected span { background:#e4eef8; color:#1b4c7e; }
     .primary-btn { background: #1b3050 !important; color: #fff !important; }
     .filter-card { margin-bottom: 16px; padding: 16px !important; }
     .filter-row { display: flex; gap: 16px; }
@@ -426,6 +450,8 @@ import { QuickSaleService, ManualQuickProduct } from '../../../core/services/sal
       .skeleton-row { grid-template-columns:minmax(100px, 2fr) minmax(50px, 1fr); gap:8px; }
       .skeleton-row i:last-child { display:none; }
       .quick-products-header { align-items:flex-start; flex-direction:column; }
+      .products-tabs { overflow-x:auto; }
+      .products-tabs button { flex:none; padding:10px 9px; font-size:12px; }
       .quick-products-title { align-items:flex-start; }
       .quick-products-title p { max-width:260px; }
       .quick-product-form { align-items:stretch; flex-direction:column; gap:0; padding:14px 16px 4px; }
@@ -470,6 +496,7 @@ export class ProductListComponent implements OnInit {
   search = '';
   categoryFilter: number | null = null;
   showInactive = false;
+  selectedProductsTab: 'stock' | 'quick' = 'stock';
   pageIndex = 0;
   pageSize = 25;
   cols = ['name', 'code', 'category', 'retail', 'wholesale', 'stock', 'status', 'actions'];

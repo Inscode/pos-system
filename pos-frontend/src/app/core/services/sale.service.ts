@@ -5,6 +5,8 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { CheckoutRequest, HeldSale } from '../models/sale.model';
 
+export interface ManualQuickProduct { id: number; name: string; unitPrice: number; active?: boolean; }
+
 @Injectable({ providedIn: 'root' })
 export class SaleService {
   private base = `${environment.apiUrl}/sales`;
@@ -47,8 +49,16 @@ export class QuickSaleService {
     return this.http.post<any>(this.base, payload).pipe(map(r => r.data));
   }
 
-  getManualProducts(): Observable<{ id: number; name: string; unitPrice: number }[]> {
+  getManualProducts(): Observable<ManualQuickProduct[]> {
     return this.http.get<any>(`${environment.apiUrl}/manual-products`).pipe(map(r => r.data));
+  }
+
+  saveManualProduct(product: { name: string; unitPrice: number }): Observable<ManualQuickProduct> {
+    return this.http.post<any>(`${environment.apiUrl}/manual-products`, product).pipe(map(r => r.data));
+  }
+
+  deleteManualProduct(id: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/manual-products/${id}`);
   }
 
   getByDate(date: string, salespersonId?: number | null): Observable<any[]> {

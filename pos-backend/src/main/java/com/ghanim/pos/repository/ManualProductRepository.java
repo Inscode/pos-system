@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ManualProductRepository extends JpaRepository<ManualProduct, Long> {
-    List<ManualProduct> findAllByOrderByNameAsc();
+    List<ManualProduct> findAllByActiveTrueOrderByNameAsc();
     Optional<ManualProduct> findByNameIgnoreCase(String name);
 }

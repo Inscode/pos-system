@@ -20,6 +20,7 @@ import { StockAdjustComponent } from '../stock-adjust/stock-adjust.component';
 import { LabelPrintDialogComponent } from '../../pos/components/label-print-dialog/label-print-dialog.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { StockRequestService, StockRequest } from '../../../core/services/stock.service';
+import { QuickSaleService, ManualQuickProduct } from '../../../core/services/sale.service';
 
 @Component({
   selector: 'app-product-list',
@@ -94,6 +95,62 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
                   <mat-icon>close</mat-icon> Reject
                 </button>
               </div>
+            </div>
+          }
+        </mat-card>
+      }
+
+      @if (isOwner) {
+        <mat-card class="quick-products-card">
+          <div class="quick-products-header">
+            <div class="quick-products-title">
+              <span class="quick-products-icon"><mat-icon>flash_on</mat-icon></span>
+              <div>
+                <h2>Quick Sale products</h2>
+                <p>Manage saved items used when selling products outside your stock list.</p>
+              </div>
+              <span class="quick-products-count">{{ manualProducts.length }}</span>
+            </div>
+            <button mat-stroked-button type="button" class="add-quick-product" (click)="showManualProductForm = !showManualProductForm">
+              <mat-icon>{{ showManualProductForm ? 'close' : 'add' }}</mat-icon>
+              {{ showManualProductForm ? 'Close' : 'Add quick product' }}
+            </button>
+          </div>
+
+          @if (showManualProductForm) {
+            <form class="quick-product-form" (ngSubmit)="saveManualProduct()">
+              <mat-form-field appearance="outline">
+                <mat-label>Product name</mat-label>
+                <input matInput name="manualProductName" [(ngModel)]="manualProductName" maxlength="255" required />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Single item price (LKR)</mat-label>
+                <input matInput name="manualProductPrice" type="number" [(ngModel)]="manualProductPrice" min="0.01" step="0.01" required />
+              </mat-form-field>
+              <button mat-flat-button type="submit" class="primary-btn" [disabled]="savingManualProduct || !manualProductName.trim() || !manualProductPrice || manualProductPrice <= 0">
+                @if (savingManualProduct) { <mat-spinner diameter="18"></mat-spinner> } @else { <mat-icon>save</mat-icon> }
+                Save product
+              </button>
+            </form>
+          }
+
+          @if (manualProductsLoading) {
+            <div class="quick-products-loading"><mat-spinner diameter="22"></mat-spinner> Loading quick sale products…</div>
+          } @else if (manualProductsError) {
+            <div class="quick-products-empty">Couldn’t load saved quick sale products. <button mat-button type="button" (click)="loadManualProducts()">Try again</button></div>
+          } @else if (manualProducts.length === 0) {
+            <div class="quick-products-empty">No saved quick sale products yet. Add one here or enter one in Quick Sale.</div>
+          } @else {
+            <div class="quick-product-list">
+              @for (product of manualProducts; track product.id) {
+                <div class="quick-product-row">
+                  <div class="quick-product-name"><mat-icon>inventory_2</mat-icon><span>{{ product.name }}</span></div>
+                  <strong>LKR {{ product.unitPrice | number:'1.2-2' }} <small>each</small></strong>
+                  <button mat-icon-button type="button" class="remove-quick-product" [attr.aria-label]="'Remove ' + product.name" matTooltip="Remove from Quick Sale" (click)="confirmRemoveManualProduct(product)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </div>
+              }
             </div>
           }
         </mat-card>
@@ -258,6 +315,30 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
     .filter-row { display: flex; gap: 16px; }
     .search-field { flex: 1; }
     .product-table { width: 100%; }
+    .quick-products-card { margin-bottom:16px; padding:0 !important; overflow:hidden; }
+    .quick-products-header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; border-bottom:1px solid #edf0f4; }
+    .quick-products-title { display:flex; align-items:center; gap:12px; min-width:0; }
+    .quick-products-icon { display:grid; place-items:center; width:40px; height:40px; border-radius:11px; background:#eef5fc; color:#1b4c7e; flex:none; }
+    .quick-products-icon mat-icon { font-size:21px; width:21px; height:21px; }
+    .quick-products-title h2 { margin:0; color:#1b3050; font-size:15px; font-weight:700; }
+    .quick-products-title p { margin:3px 0 0; color:#8995a3; font-size:12px; }
+    .quick-products-count { display:grid; place-items:center; min-width:26px; height:24px; padding:0 7px; border-radius:12px; background:#f1f5f9; color:#506176; font-size:11px; font-weight:700; }
+    .add-quick-product { color:#1b4c7e !important; border-color:#cbd8e5 !important; flex:none; }
+    .add-quick-product mat-icon { font-size:18px; width:18px; height:18px; vertical-align:middle; }
+    .quick-product-form { display:flex; align-items:center; gap:12px; padding:14px 18px 4px; background:#f9fbfd; border-bottom:1px solid #edf0f4; }
+    .quick-product-form mat-form-field { flex:1; min-width:150px; }
+    .quick-product-form button { flex:none; margin-bottom:18px; display:flex; align-items:center; gap:6px; }
+    .quick-products-loading { display:flex; align-items:center; justify-content:center; gap:10px; padding:22px; color:#748195; font-size:12px; }
+    .quick-products-empty { display:flex; align-items:center; justify-content:center; gap:6px; padding:22px; color:#8995a3; font-size:12px; text-align:center; }
+    .quick-product-list { padding:4px 18px; }
+    .quick-product-row { display:flex; align-items:center; gap:12px; min-height:48px; border-bottom:1px solid #f0f2f5; }
+    .quick-product-row:last-child { border-bottom:0; }
+    .quick-product-name { display:flex; align-items:center; flex:1; gap:9px; min-width:0; color:#344a63; font-size:13px; font-weight:600; }
+    .quick-product-name mat-icon { color:#91a0b1; font-size:18px; width:18px; height:18px; flex:none; }
+    .quick-product-name span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .quick-product-row strong { color:#1b3050; font-size:13px; white-space:nowrap; }
+    .quick-product-row strong small { color:#8995a3; font-size:10px; font-weight:500; }
+    .remove-quick-product { color:#b45309; flex:none; }
     .products-loading { padding:20px 16px 12px; }
     .loading-message { display:flex; align-items:center; justify-content:center; gap:12px; padding:20px 12px 24px; color:#1b3050; }
     .loading-message div { display:flex; flex-direction:column; gap:3px; }
@@ -344,6 +425,15 @@ import { StockRequestService, StockRequest } from '../../../core/services/stock.
       .p-name { font-size: 12px; }
       .skeleton-row { grid-template-columns:minmax(100px, 2fr) minmax(50px, 1fr); gap:8px; }
       .skeleton-row i:last-child { display:none; }
+      .quick-products-header { align-items:flex-start; flex-direction:column; }
+      .quick-products-title { align-items:flex-start; }
+      .quick-products-title p { max-width:260px; }
+      .quick-product-form { align-items:stretch; flex-direction:column; gap:0; padding:14px 16px 4px; }
+      .quick-product-form mat-form-field { min-width:0; width:100%; }
+      .quick-product-form button { align-self:flex-end; margin:0 0 12px; }
+      .quick-product-list { padding:4px 12px; }
+      .quick-product-row { gap:6px; }
+      .quick-product-row strong { font-size:11px; }
 
       /* Hide less critical columns — keep product name, retail price, stock, actions */
       .cdk-column-code,
@@ -360,6 +450,7 @@ export class ProductListComponent implements OnInit {
   private snack = inject(MatSnackBar);
   private authService = inject(AuthService);
   private stockRequestService = inject(StockRequestService);
+  private quickSaleService = inject(QuickSaleService);
 
   isOwner = this.authService.isOwner();
   allProducts: Product[] = [];
@@ -369,6 +460,13 @@ export class ProductListComponent implements OnInit {
   skeletonRows = [1, 2, 3, 4, 5];
   categories: Category[] = [];
   pendingRequests: StockRequest[] = [];
+  manualProducts: ManualQuickProduct[] = [];
+  manualProductsLoading = false;
+  manualProductsError = false;
+  showManualProductForm = false;
+  savingManualProduct = false;
+  manualProductName = '';
+  manualProductPrice: number | null = null;
   search = '';
   categoryFilter: number | null = null;
   showInactive = false;
@@ -387,7 +485,10 @@ export class ProductListComponent implements OnInit {
   ngOnInit() {
     this.loadProducts();
     this.categoryService.getAll().subscribe(c => this.categories = c);
-    if (this.isOwner) this.loadPendingRequests();
+    if (this.isOwner) {
+      this.loadPendingRequests();
+      this.loadManualProducts();
+    }
   }
 
   loadPendingRequests() {
@@ -425,6 +526,57 @@ export class ProductListComponent implements OnInit {
       return matchCat && matchSearch;
     });
     this.pageIndex = 0;
+  }
+
+  loadManualProducts() {
+    this.manualProductsLoading = true;
+    this.manualProductsError = false;
+    this.quickSaleService.getManualProducts().subscribe({
+      next: products => {
+        this.manualProducts = products ?? [];
+        this.manualProductsLoading = false;
+      },
+      error: () => {
+        this.manualProductsLoading = false;
+        this.manualProductsError = true;
+      }
+    });
+  }
+
+  saveManualProduct() {
+    const name = this.manualProductName.trim();
+    const unitPrice = Number(this.manualProductPrice);
+    if (!name || !Number.isFinite(unitPrice) || unitPrice <= 0 || this.savingManualProduct) return;
+
+    this.savingManualProduct = true;
+    this.quickSaleService.saveManualProduct({ name, unitPrice }).subscribe({
+      next: product => {
+        this.manualProducts = [...this.manualProducts.filter(item => item.id !== product.id), product]
+          .sort((a, b) => a.name.localeCompare(b.name));
+        this.manualProductName = '';
+        this.manualProductPrice = null;
+        this.showManualProductForm = false;
+        this.savingManualProduct = false;
+        this.snack.open('Quick Sale product saved', '', { duration: 2200 });
+      },
+      error: () => {
+        this.savingManualProduct = false;
+        this.snack.open('Could not save Quick Sale product', 'OK', { duration: 3000 });
+      }
+    });
+  }
+
+  confirmRemoveManualProduct(product: ManualQuickProduct) {
+    const snack = this.snack.open(`Remove "${product.name}" from Quick Sale?`, 'Remove', { duration: 5000 });
+    snack.onAction().subscribe(() => {
+      this.quickSaleService.deleteManualProduct(product.id).subscribe({
+        next: () => {
+          this.manualProducts = this.manualProducts.filter(item => item.id !== product.id);
+          this.snack.open('Quick Sale product removed', '', { duration: 2000 });
+        },
+        error: () => this.snack.open('Could not remove Quick Sale product', 'OK', { duration: 3000 })
+      });
+    });
   }
 
   clearFilters() {

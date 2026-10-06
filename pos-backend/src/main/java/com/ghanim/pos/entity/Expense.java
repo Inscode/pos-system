@@ -14,7 +14,8 @@ import java.time.LocalDateTime;
 public class Expense {
 
     public enum Category {
-        SUPPLIER_PAYMENT, TEA, BUS_FARE, TEMP_WORKER, SALARY, OTHER
+        SUPPLIER_PAYMENT, TEA, BUS_FARE, TEMP_WORKER, SALARY,
+        CHARITY, SHOP_EXPENSE, TRANSPORT, CLEANING, FOOD, OTHER
     }
 
     @Id
@@ -41,6 +42,9 @@ public class Expense {
 
     @Column(nullable = false)
     private LocalDate expenseDate;
+
+    @Column(name = "cash_movement_id", unique = true)
+    private Long cashMovementId;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

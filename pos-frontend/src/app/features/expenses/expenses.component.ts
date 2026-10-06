@@ -17,6 +17,17 @@ import { SalespersonService, SupplierService, TempWorkerService } from '../../co
 import { Expense, ExpenseCategory, CATEGORY_LABELS, CATEGORY_ICONS } from '../../core/models/expense.model';
 import { Supplier, Salesperson, type TempWorker } from '../../core/models/product.model';
 
+function colomboDateParts() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Colombo', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date());
+  return Object.fromEntries(parts.map(p => [p.type, p.value]));
+}
+function colomboToday() {
+  const p = colomboDateParts();
+  return `${p['year']}-${p['month']}-${p['day']}`;
+}
+
 @Component({
   selector: 'app-expenses',
   standalone: true,
@@ -227,9 +238,13 @@ import { Supplier, Salesperson, type TempWorker } from '../../core/models/produc
                       <div class="exp-time">{{ e.createdAt | date:'HH:mm' }}</div>
                     </div>
                     <div class="exp-amount">Rs {{ e.amount | number:'1.0-0' }}</div>
-                    <button class="del-btn" (click)="deleteExpense(e)" matTooltip="Delete">
-                      <mat-icon>delete_outline</mat-icon>
-                    </button>
+                    @if (e.cashMovementId) {
+                      <mat-icon class="linked-expense" matTooltip="Recorded from Cash Out; kept linked to drawer records">lock</mat-icon>
+                    } @else {
+                      <button class="del-btn" (click)="deleteExpense(e)" matTooltip="Delete">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    }
                   </div>
                 }
               }
@@ -410,6 +425,7 @@ import { Supplier, Salesperson, type TempWorker } from '../../core/models/produc
     }
     .del-btn:hover { background: #fdecea; }
     .del-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    .linked-expense { color: #8793a2; font-size: 18px; margin: 0 8px; }
 
     /* Summary */
     .expense-total-bar { }
@@ -484,8 +500,8 @@ export class ExpensesComponent implements OnInit {
   private router = inject(Router);
   auth = inject(AuthService);
 
-  selectedDate = new Date().toISOString().split('T')[0];
-  selectedMonth = new Date().toISOString().substring(0, 7);
+  selectedDate = colomboToday();
+  selectedMonth = colomboToday().substring(0, 7);
 
   expenses: Expense[] = [];
   suppliers: Supplier[] = [];

@@ -10,6 +10,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SaleService } from '../../../../core/services/sale.service';
 import { CartItem } from '../../../../core/models/sale.model';
 import { Salesperson } from '../../../../core/models/product.model';
@@ -22,7 +23,7 @@ import { Customer } from '../../../../core/models/customer.model';
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatButtonModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatRadioModule, MatProgressSpinnerModule, MatAutocompleteModule
+    MatRadioModule, MatProgressSpinnerModule, MatAutocompleteModule, MatSnackBarModule
   ],
   template: `
     <div class="checkout-dialog">
@@ -232,6 +233,7 @@ export class CheckoutDialogComponent implements OnInit {
     salespersonId: number | null; salespersons: Salesperson[]; saleType: string;
   } = inject(MAT_DIALOG_DATA);
   private saleService = inject(SaleService);
+  private snack = inject(MatSnackBar);
   private customerService = inject(CustomerService);
 
   total = 0;
@@ -337,6 +339,7 @@ export class CheckoutDialogComponent implements OnInit {
         this.dialogRef.close({
           ...result,
           _autoPrint: print,
+          _openDrawerOnEntry: this.paymentMethod === 'CASH',
           _itemDiscount: this.data.totalDiscount,
           _billDiscount: this.data.billDiscount,
           _netSubtotal: this.data.subtotal - this.data.totalDiscount,

@@ -525,6 +525,7 @@ export class QuickSaleDialogComponent implements OnInit {
             _changeAmount: this.change > 0 ? this.change : 0,
             _itemDiscount: 0,
             _autoPrint: false,
+            _openDrawerOnEntry: this.paymentMethod === 'CASH',
           }
         });
       },

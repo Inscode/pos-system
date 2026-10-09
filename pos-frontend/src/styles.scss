@@ -32,6 +32,46 @@ html, body {
 .text-navy    { color: $primary-navy; }
 .text-muted   { color: #777; }
 
+// POS printer selector styles are global to keep the POS component stylesheet
+// within Angular's production anyComponentStyle budget.
+.pos-wrapper .printer-picker-wrap { position: relative; }
+.pos-wrapper .printer-picker-btn {
+  display: flex; align-items: center; gap: 6px; height: 38px; max-width: 250px;
+  padding: 0 10px; border: 1px solid #dce5ed; border-radius: 8px; background: #fff;
+  color: #344b62; font: 600 12px 'Inter', sans-serif; cursor: pointer;
+}
+.pos-wrapper .printer-picker-btn:hover { border-color: #168454; background: #f5fbf7; }
+.pos-wrapper .printer-picker-btn>span { max-width: 165px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pos-wrapper .printer-picker-btn mat-icon { width: 17px; height: 17px; font-size: 17px; color: #168454; }
+.pos-wrapper .printer-picker-btn .printer-chevron { width: 16px; height: 16px; font-size: 16px; color: #8290a1; }
+.pos-wrapper .printer-picker-popover {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 120;
+  width: min(330px, calc(100vw - 24px)); padding: 14px; border: 1px solid #e2e8ef;
+  border-radius: 11px; background: #fff; box-shadow: 0 12px 32px rgba(20, 38, 60, .18);
+}
+.pos-wrapper .printer-role-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px; border-radius: 8px; background: #f2f5f8; }
+.pos-wrapper .printer-role-toggle button {
+  display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 34px;
+  border: 0; border-radius: 6px; background: transparent; color: #64758a;
+  font: 600 11px 'Inter', sans-serif; cursor: pointer;
+}
+.pos-wrapper .printer-role-toggle button.active { background: #fff; color: #147b50; box-shadow: 0 1px 4px rgba(25, 45, 65, .12); }
+.pos-wrapper .printer-role-toggle mat-icon { width: 15px; height: 15px; font-size: 15px; }
+.pos-wrapper .printer-current-label { margin-top: 12px; color: #8794a2; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.pos-wrapper .printer-current-name { margin-top: 3px; overflow-wrap: anywhere; color: #263d54; font-size: 13px; font-weight: 700; }
+.pos-wrapper .printer-refresh-btn { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 8px; border: 1px solid #dce5ed; border-radius: 6px; background: #fff; color: #486179; font: 600 11px 'Inter', sans-serif; cursor: pointer; }
+.pos-wrapper .printer-refresh-btn:disabled { opacity: .6; cursor: default; }
+.pos-wrapper .printer-refresh-btn mat-icon { width: 15px; height: 15px; font-size: 15px; }
+.pos-wrapper .printer-error { margin-top: 8px; color: #bd3f3f; font-size: 11px; line-height: 1.4; }
+.pos-wrapper .printer-list-label { margin: 13px 0 5px; color: #8794a2; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.pos-wrapper .printer-list { display: flex; flex-direction: column; max-height: 190px; overflow-y: auto; }
+.pos-wrapper .printer-option { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border: 0; border-radius: 6px; background: #fff; color: #40566d; text-align: left; font: 500 11px 'Inter', sans-serif; cursor: pointer; }
+.pos-wrapper .printer-option:hover { background: #f5f8fa; }
+.pos-wrapper .printer-option.selected { color: #147b50; font-weight: 700; }
+.pos-wrapper .printer-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pos-wrapper .printer-option mat-icon { flex: none; width: 16px; height: 16px; font-size: 16px; }
+.pos-wrapper .printer-routing-note { margin: 11px 0 0; padding-top: 9px; border-top: 1px solid #edf1f4; color: #8390a0; font-size: 10px; line-height: 1.4; }
+
 .fw-600 { font-weight: 600; }
 .fw-700 { font-weight: 700; }
 
@@ -59,6 +99,9 @@ html, body {
 
 // Mobile: touch-scroll Material tabs (no arrow buttons)
 @media (max-width: 767px) {
+  .pos-wrapper .printer-picker-btn { max-width: 126px; height: 34px; gap: 4px; padding: 0 6px; font-size: 10px; }
+  .pos-wrapper .printer-picker-btn>span { max-width: 68px; }
+  .pos-wrapper .printer-picker-popover { position: fixed; top: 56px; right: 8px; }
   .mat-mdc-tab-header-pagination { display: none !important; }
   .mat-mdc-tab-header {
     overflow-x: auto !important;

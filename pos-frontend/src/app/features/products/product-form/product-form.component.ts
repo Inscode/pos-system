@@ -146,20 +146,26 @@ import { AuthService } from '../../../core/services/auth.service';
               <mat-label>Image URL</mat-label>
               <input matInput formControlName="imageUrl" placeholder="https://..." />
             </mat-form-field>
+            @if (!imageUploaded) {
+              <div class="image-error">Upload an image under 200 KB before saving this product.</div>
+            }
           }
 
           @if (imageMode === 'upload') {
-            <div class="upload-area" (click)="fileInput.click()" [class.uploading]="uploading">
+            <label class="upload-area" for="product-image-file" [class.uploading]="uploading">
+              <input id="product-image-file" class="file-input" type="file" accept="image/*"
+                [disabled]="uploading" (change)="onFileSelected($event)" />
               @if (uploading) {
                 <mat-spinner diameter="28"></mat-spinner>
-                <span>Uploading to ImageKit…</span>
+                <span>{{ uploadStatus }}</span>
               } @else {
                 <mat-icon>cloud_upload</mat-icon>
-                <span>Click to choose image (max 5 MB)</span>
+                <span>Choose image (must be under 200 KB)</span>
               }
-            </div>
-            <input #fileInput type="file" accept="image/*" style="display:none" (change)="onFileSelected($event)">
+            </label>
           }
+
+          @if (fileError) { <div class="image-error" role="alert">{{ fileError }}</div> }
 
           @if (form.value.imageUrl) {
             <div class="img-preview-wrap">
@@ -169,7 +175,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 <div class="img-broken"><mat-icon>broken_image</mat-icon> Preview unavailable</div>
               }
               <button mat-icon-button class="clear-img-btn" type="button"
-                (click)="form.patchValue({imageUrl:''}); previewError=false" matTooltip="Remove image">
+                (click)="clearImage()" matTooltip="Remove image">
                 <mat-icon>close</mat-icon>
               </button>
             </div>
@@ -183,7 +189,7 @@ import { AuthService } from '../../../core/services/auth.service';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">CANCEL</button>
-      <button mat-flat-button class="save-btn" (click)="save()" [disabled]="loading || form.invalid">
+      <button mat-flat-button class="save-btn" (click)="save()" [disabled]="!canSave()">
         @if (loading) { <mat-spinner diameter="18" /> } @else { SAVE }
       </button>
     </mat-dialog-actions>
@@ -208,6 +214,7 @@ import { AuthService } from '../../../core/services/auth.service';
     .img-mode-toggle .active-mode { background: #1b3050 !important; color: #fff !important; }
 
     .upload-area {
+      position: relative;
       display: flex; align-items: center; justify-content: center; gap: 10px;
       border: 2px dashed #c8d0dc; border-radius: 8px; padding: 20px;
       cursor: pointer; color: #6b7280; font-size: 13px; transition: border-color .2s;
@@ -215,6 +222,9 @@ import { AuthService } from '../../../core/services/auth.service';
     .upload-area:hover { border-color: #1b3050; color: #1b3050; }
     .upload-area.uploading { cursor: default; opacity: .7; }
     .upload-area mat-icon { font-size: 28px; width: 28px; height: 28px; }
+    .file-input { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+    .file-input:disabled { cursor:default; }
+    .image-error { color:#b42318; font-size:12px; margin-top:-3px; }
 
     .img-preview-wrap { position: relative; display: inline-block; }
     .img-preview { width: 100%; max-height: 140px; object-fit: contain; border-radius: 8px; border: 1px solid #eef0f4; }
@@ -239,11 +249,14 @@ export class ProductFormComponent implements OnInit {
   auth = inject(AuthService);
   private appSettingService = inject(AppSettingService);
   suppliers: any[] = [];
+  p = this.data.product;
   loading = false;
   uploading = false;
-  imageMode: 'url' | 'upload' = 'url';
+  imageMode: 'url' | 'upload' = 'upload';
+  imageUploaded = !!this.p?.imageUrl;
+  fileError = '';
+  uploadStatus = '';
   previewError = false;
-  p = this.data.product;
   decodedCost: number | null = null;
   decodeError: string | null = null;
   private cipherKey: string | null = null;
@@ -266,7 +279,7 @@ export class ProductFormComponent implements OnInit {
     minWholesaleQty: [this.p?.minWholesaleQty || 1],
     showInPos: [this.p?.showInPos ?? true],
     showOnline: [this.p?.showOnline ?? true],
-    imageUrl: [this.p?.imageUrl || ''],
+    imageUrl: [this.p?.imageUrl || '', Validators.required],
     initialStock: [null]
   });
 
@@ -285,21 +298,116 @@ export class ProductFormComponent implements OnInit {
     }
   }
 
-  onFileSelected(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
+  async onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
+    input.value = '';
+    this.fileError = '';
+    if (!file.type.startsWith('image/')) {
+      this.fileError = 'Choose a valid image file.';
+      return;
+    }
     this.uploading = true;
     this.previewError = false;
-    this.productService.uploadImage(file).subscribe({
-      next: url => {
-        this.form.patchValue({ imageUrl: url });
-        this.uploading = false;
-      },
-      error: () => {
-        this.snack.open('Upload failed. Check your ImageKit keys.', 'OK', { duration: 4000 });
-        this.uploading = false;
+    this.uploadStatus = 'Preparing image…';
+    try {
+      const uploadFile = file.size < 200 * 1024 ? file : await this.compressImage(file);
+      this.uploadStatus = uploadFile === file
+        ? 'Uploading to ImageKit…'
+        : `Uploading compressed image (${Math.ceil(uploadFile.size / 1024)} KB)…`;
+      this.productService.uploadImage(uploadFile).subscribe({
+        next: url => {
+          this.form.patchValue({ imageUrl: url });
+          this.imageUploaded = true;
+          this.uploading = false;
+          this.uploadStatus = '';
+        },
+        error: err => {
+          this.fileError = err.error?.message || 'Image upload failed. Check your connection and try again.';
+          this.snack.open(this.fileError, 'OK', { duration: 4000 });
+          this.uploading = false;
+          this.uploadStatus = '';
+        }
+      });
+    } catch (error) {
+      this.fileError = error instanceof Error ? error.message : 'Could not prepare this image. Try another image.';
+      this.snack.open(this.fileError, 'OK', { duration: 4500 });
+      this.uploading = false;
+      this.uploadStatus = '';
+    }
+  }
+
+  private async compressImage(file: File): Promise<File> {
+    const maxBytes = 200 * 1024;
+    const source = await this.decodeImage(file);
+    try {
+      const sourceWidth = source.width;
+      const sourceHeight = source.height;
+      if (!sourceWidth || !sourceHeight) throw new Error('Could not read this image. Try another image.');
+
+      let scale = Math.min(1, 1800 / Math.max(sourceWidth, sourceHeight));
+      let compressed: Blob | null = null;
+      for (let attempt = 0; attempt < 16; attempt++) {
+        if (attempt > 0 && attempt % 4 === 0) scale *= 0.78;
+        const quality = [0.86, 0.74, 0.62, 0.5][attempt % 4];
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+        canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Image compression is unavailable in this browser.');
+        // JPEG does not preserve transparency, so flatten transparent images on white.
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(source.image, 0, 0, canvas.width, canvas.height);
+        compressed = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+        if (compressed && compressed.size < maxBytes) {
+          const name = file.name.replace(/\.[^.]+$/, '') || 'product-image';
+          return new File([compressed], `${name}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+        }
       }
-    });
+      throw new Error('This image could not be compressed below 200 KB. Choose a smaller image.');
+    } finally {
+      source.close();
+    }
+  }
+
+  private async decodeImage(file: File): Promise<{ image: CanvasImageSource; width: number; height: number; close: () => void }> {
+    if (typeof createImageBitmap === 'function') {
+      try {
+        const bitmap = await createImageBitmap(file);
+        return { image: bitmap, width: bitmap.width, height: bitmap.height, close: () => bitmap.close() };
+      } catch { /* Fall back to an object URL for browsers with partial bitmap support. */ }
+    }
+    const url = URL.createObjectURL(file);
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const element = new Image();
+        element.onload = () => resolve(element);
+        element.onerror = () => reject(new Error('This image format is not supported by the browser.'));
+        element.src = url;
+      });
+      return {
+        image,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        close: () => URL.revokeObjectURL(url)
+      };
+    } catch (error) {
+      URL.revokeObjectURL(url);
+      throw error;
+    }
+  }
+
+  canSave(): boolean {
+    return !this.loading && !this.uploading && this.imageUploaded
+      && this.form.valid && !!this.form.value.imageUrl?.trim();
+  }
+
+  clearImage() {
+    this.form.patchValue({ imageUrl: '' });
+    this.imageUploaded = false;
+    this.previewError = false;
   }
 
   generateBarcode() {
@@ -357,7 +465,7 @@ export class ProductFormComponent implements OnInit {
   }
 
   save() {
-    if (this.form.invalid) return;
+    if (!this.canSave()) return;
     this.loading = true;
     const val = this.form.value;
     const obs = this.p

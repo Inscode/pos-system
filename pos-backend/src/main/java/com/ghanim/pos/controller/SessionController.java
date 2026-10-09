@@ -27,8 +27,24 @@ public class SessionController {
 
     @PostMapping("/open")
     public ResponseEntity<ApiResponse<Session>> open(@RequestBody Map<String, Object> body) {
-        String cashierName = (String) body.get("cashierName");
-        BigDecimal openingFloat = new BigDecimal(body.getOrDefault("openingFloat", "0").toString());
+        Object cashierNameRaw = body.get("cashierName");
+        if (cashierNameRaw == null || cashierNameRaw.toString().isBlank()) {
+            throw new IllegalArgumentException("Cashier name is required");
+        }
+        Object openingFloatRaw = body.get("openingFloat");
+        if (openingFloatRaw == null || openingFloatRaw.toString().isBlank()) {
+            throw new IllegalArgumentException("Opening cash amount is required");
+        }
+        BigDecimal openingFloat;
+        try {
+            openingFloat = new BigDecimal(openingFloatRaw.toString());
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Opening cash amount must be a valid number");
+        }
+        if (openingFloat.signum() < 0) {
+            throw new IllegalArgumentException("Opening cash amount cannot be negative");
+        }
+        String cashierName = cashierNameRaw.toString().trim();
         return ResponseEntity.ok(ApiResponse.ok(sessionService.openSession(cashierName, openingFloat), "Session opened"));
     }
 

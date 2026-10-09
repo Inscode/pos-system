@@ -6,7 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { SaleService } from '../../../core/services/sale.service';
 
 @Component({
   selector: 'app-credit-payment-dialog',
@@ -78,7 +77,6 @@ import { SaleService } from '../../../core/services/sale.service';
 export class CreditPaymentDialogComponent {
   dialogRef = inject(MatDialogRef<CreditPaymentDialogComponent>);
   data: any = inject(MAT_DIALOG_DATA);
-  private saleService = inject(SaleService);
 
   amount: number | null = null;
   loading = false;
@@ -91,11 +89,7 @@ export class CreditPaymentDialogComponent {
 
   confirm() {
     if (!this.amount) return;
-    this.loading = true;
-    this.saleService.recordPayment(this.data.sale.id, this.amount).subscribe({
-      next: () => this.dialogRef.close(true),
-      error: () => { this.loading = false; }
-    });
+    this.dialogRef.close(this.amount);
   }
 }
 

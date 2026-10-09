@@ -528,7 +528,7 @@ export class ExpensesComponent implements OnInit {
 
   ngOnInit() {
     this.supplierService.getAll().subscribe(s => this.suppliers = s);
-    this.spService.getAll().subscribe(s => this.salespersons = s);
+    this.spService.getAll().subscribe(s => this.salespersons = s.filter(sp => sp.active));
     this.twService.getAll().subscribe(w => this.tempWorkers = w);
     this.load();
   }

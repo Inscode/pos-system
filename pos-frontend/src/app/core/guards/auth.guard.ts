@@ -41,3 +41,11 @@ export const cashierOrOwnerGuard: CanActivateFn = () => {
   router.navigate([auth.defaultRoute()]);
   return false;
 };
+
+export const ownerCashierSettingsGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (auth.isOwner() || auth.isCashier()) return true;
+  router.navigate([auth.defaultRoute()]);
+  return false;
+};

@@ -87,6 +87,7 @@ export class AuthService {
 
   defaultRoute(): string {
     switch (this.currentUser()?.role) {
+      case 'OWNER':         return '/dashboard';
       case 'SALESPERSON':  return '/needs';
       case 'STORE_PERSON': return '/store-needs';
       default:             return '/pos';

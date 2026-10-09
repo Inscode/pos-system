@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { PurchaseNeedService } from '../../core/services/purchase-need.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PurchaseNeed } from '../../core/models/purchase-need.model';
+import { formatColomboDate } from '../../core/utils/colombo-date.util';
 
 @Component({
   selector: 'app-store-needs',
@@ -79,7 +80,7 @@ import { PurchaseNeed } from '../../core/models/purchase-need.model';
               }
               <span>Requested by <strong>{{ need.requestedBy }}</strong></span>
               <span class="sep">·</span>
-              <span class="meta-time">{{ need.requestedAt | date:'MMM d, h:mm a' }}</span>
+              <span class="meta-time">{{ formatNeedDate(need.requestedAt) }}</span>
             </div>
             @if (need.notes) {
               <div class="nc-notes">"{{ need.notes }}"</div>
@@ -189,6 +190,10 @@ import { PurchaseNeed } from '../../core/models/purchase-need.model';
 export class StoreNeedsComponent implements OnInit {
   private needsService = inject(PurchaseNeedService);
   private auth = inject(AuthService);
+
+  formatNeedDate(value: string | null | undefined): string {
+    return formatColomboDate(value);
+  }
   private snack = inject(MatSnackBar);
 
   needs: PurchaseNeed[] = [];

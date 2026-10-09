@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/demand-products/**").hasRole("OWNER")
                         .requestMatchers(HttpMethod.POST, "/api/manual-products").hasRole("OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/manual-products/**").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/quick-sales/*/cancel").hasRole("OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/purchase-needs")
                                 .hasAnyRole("OWNER", "CASHIER", "SALESPERSON", "STORE_PERSON")
                         .requestMatchers(HttpMethod.POST, "/api/purchase-needs")
@@ -82,6 +83,8 @@ public class SecurityConfig {
                                 "/api/categories",
                                 "/api/suppliers",
                                 "/api/salespersons").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/salespersons/*/deactivate")
+                                .hasAnyRole("OWNER", "CASHIER")
                         .requestMatchers(HttpMethod.POST, "/api/products").authenticated()
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/products/**",

@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { SaleService } from '../../../core/services/sale.service';
+import { QuickSaleService, SaleService } from '../../../core/services/sale.service';
 
 const REASONS = [
   'Customer Request',
@@ -32,7 +32,7 @@ const REASONS = [
       <div class="dialog-header">
         <mat-icon class="warn-icon">warning</mat-icon>
         <div>
-          <h2>Cancel Sale #{{ data.saleId }}</h2>
+          <h2>Cancel {{ data.quickSale ? 'Quick Sale' : 'Sale' }} #{{ data.saleId }}</h2>
           <p class="sub">This will restore stock. Requires manager approval.</p>
         </div>
       </div>
@@ -90,6 +90,7 @@ export class CancelSaleDialogComponent {
   dialogRef = inject(MatDialogRef<CancelSaleDialogComponent>);
   data: any = inject(MAT_DIALOG_DATA);
   private saleService = inject(SaleService);
+  private quickSaleService = inject(QuickSaleService);
 
   reasons = REASONS;
   reason = '';
@@ -101,7 +102,10 @@ export class CancelSaleDialogComponent {
     if (!this.reason || !this.pin) return;
     this.loading = true;
     this.errorMsg = '';
-    this.saleService.cancel(this.data.saleId, this.pin, this.reason).subscribe({
+    const cancelRequest = this.data.quickSale
+      ? this.quickSaleService.cancel(this.data.saleId, this.pin, this.reason)
+      : this.saleService.cancel(this.data.saleId, this.pin, this.reason);
+    cancelRequest.subscribe({
       next: () => this.dialogRef.close('cancelled'),
       error: err => {
         this.loading = false;

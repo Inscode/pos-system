@@ -61,8 +61,8 @@ export class CashService {
     return this.http.post<any>(`${this.base}/in`, { sessionId, amount, reason, notes }).pipe(map(r => r.data));
   }
 
-  cashOut(sessionId: number, amount: number, reason: string, notes?: string): Observable<CashMovement> {
-    return this.http.post<any>(`${this.base}/out`, { sessionId, amount, reason, notes }).pipe(map(r => r.data));
+  cashOut(sessionId: number, amount: number, reason: string, notes?: string, supplierId?: number): Observable<CashMovement> {
+    return this.http.post<any>(`${this.base}/out`, { sessionId, amount, reason, notes, supplierId }).pipe(map(r => r.data));
   }
 
   getMovements(sessionId: number): Observable<CashMovement[]> {

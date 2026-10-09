@@ -431,8 +431,13 @@ export const DEMO_SLOW_STOCK: SlowStockItem[] = [
 export const DEMO_CASH_FLOW: CashFlowDay[] = buildDailyBreakdown().map(d => ({
   date:        d.date,
   salesCount:  d.salesCount,
+  quickSaleCount: 0,
   revenue:     d.revenue,
   cashRevenue: Math.round(d.revenue * 0.74),
+  quickSaleCash: 0,
+  cashIn: 0,
+  cashOut: 0,
+  cashRefunds: 0,
   expenses:    1780,
   net:         Math.round(d.revenue * 0.74) - 1780,
 }));

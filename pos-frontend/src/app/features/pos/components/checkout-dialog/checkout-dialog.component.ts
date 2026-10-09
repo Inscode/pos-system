@@ -10,6 +10,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SaleService } from '../../../../core/services/sale.service';
 import { CartItem } from '../../../../core/models/sale.model';
 import { Salesperson } from '../../../../core/models/product.model';
@@ -22,7 +23,7 @@ import { Customer } from '../../../../core/models/customer.model';
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatButtonModule,
     MatIconModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatRadioModule, MatProgressSpinnerModule, MatAutocompleteModule
+    MatRadioModule, MatProgressSpinnerModule, MatAutocompleteModule, MatSnackBarModule
   ],
   template: `
     <div class="checkout-dialog">
@@ -53,13 +54,16 @@ import { Customer } from '../../../../core/models/customer.model';
         <div class="payment-section">
           @if (data.salespersons.length) {
             <mat-form-field appearance="outline" class="full-width" style="margin-bottom:4px">
-              <mat-label>Salesperson</mat-label>
-              <mat-select [(ngModel)]="selectedSalespersonId">
+              <mat-label>Salesperson *</mat-label>
+              <mat-select [(ngModel)]="selectedSalespersonId" placeholder="Select salesperson" required>
                 @for (sp of data.salespersons; track sp.id) {
                   <mat-option [value]="sp.id">{{ sp.name }}</mat-option>
                 }
               </mat-select>
+              @if (!selectedSalespersonId) { <mat-hint>Choose who made this sale</mat-hint> }
             </mat-form-field>
+          } @else {
+            <p class="hint-warn">No salesperson is available. Add or activate a salesperson before checkout.</p>
           }
 
           <!-- Customer selector: shown for wholesale or credit -->
@@ -168,9 +172,9 @@ import { Customer } from '../../../../core/models/customer.model';
     </div>
   `,
   styles: [`
-    .checkout-dialog { min-width: 420px; }
+    .checkout-dialog { display:flex; flex-direction:column; min-width: min(420px, 92vw); max-height:90vh; overflow:hidden; }
     h2 { color: #1b3050; font-weight: 700; padding: 16px 24px 0; }
-    mat-dialog-content { padding: 0 24px; }
+    mat-dialog-content { flex:1 1 auto; min-height:0; max-height:none; overflow-y:auto; overscroll-behavior:contain; padding: 0 24px; }
     .summary-section { margin-bottom: 16px; }
     .summary-row {
       display: flex; justify-content: space-between; align-items: center;
@@ -218,7 +222,7 @@ import { Customer } from '../../../../core/models/customer.model';
     .confirm-only-btn { min-width: 130px; color: #1b3050 !important; border-color: #1b3050 !important; }
     .confirm-print-btn { background: #2e7d32 !important; color: #fff !important; min-width: 150px; }
     .confirm-print-btn mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
-    mat-dialog-actions { padding: 12px 24px 16px; gap: 8px; }
+    mat-dialog-actions { flex:0 0 auto; padding: 12px 24px 16px; gap: 8px; background:#fff; }
   `]
 })
 export class CheckoutDialogComponent implements OnInit {
@@ -226,9 +230,10 @@ export class CheckoutDialogComponent implements OnInit {
   data: {
     cart: CartItem[]; subtotal: number; totalDiscount: number;
     billDiscount: number; cartTotal: number; sessionId: number;
-    salespersonId: number; salespersons: Salesperson[]; saleType: string;
+    salespersonId: number | null; salespersons: Salesperson[]; saleType: string;
   } = inject(MAT_DIALOG_DATA);
   private saleService = inject(SaleService);
+  private snack = inject(MatSnackBar);
   private customerService = inject(CustomerService);
 
   total = 0;
@@ -252,6 +257,7 @@ export class CheckoutDialogComponent implements OnInit {
 
   get confirmDisabled(): boolean {
     if (this.loading) return true;
+    if (this.selectedSalespersonId === null || this.data.salespersons.length === 0) return true;
     if (this.paymentMethod === 'CASH' && this.cashTendered < this.total) return true;
     if (this.paymentMethod === 'CREDIT' && !this.selectedCustomer) return true;
     return false;
@@ -265,7 +271,7 @@ export class CheckoutDialogComponent implements OnInit {
 
   ngOnInit() {
     this.total = this.data.cartTotal;
-    this.selectedSalespersonId = this.data.salespersonId;
+    this.selectedSalespersonId = null;
     this.calcChange();
     this.customerService.getAll().subscribe(c => {
       this.customers = c;
@@ -333,6 +339,7 @@ export class CheckoutDialogComponent implements OnInit {
         this.dialogRef.close({
           ...result,
           _autoPrint: print,
+          _openDrawerOnEntry: this.paymentMethod === 'CASH',
           _itemDiscount: this.data.totalDiscount,
           _billDiscount: this.data.billDiscount,
           _netSubtotal: this.data.subtotal - this.data.totalDiscount,

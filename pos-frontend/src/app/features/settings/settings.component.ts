@@ -28,8 +28,8 @@ import { UserService, AppUser } from '../../core/services/user.service';
     <div class="page-container">
       <h1 class="page-title">Settings</h1>
 
-      <!-- Salespersons (owner only) -->
-      @if (auth.isOwner()) {
+      <!-- Salespersons (owner and cashier) -->
+      @if (auth.isOwner() || auth.isCashier()) {
       <mat-card class="settings-card">
         <h3 class="section-title">Salespersons</h3>
         <div class="sp-list">
@@ -50,14 +50,16 @@ import { UserService, AppUser } from '../../core/services/user.service';
                     <mat-icon>close</mat-icon>
                   </button>
                 } @else {
-                  <button class="icon-action-btn edit" (click)="startEdit(sp)" title="Edit">
-                    <mat-icon>edit</mat-icon>
-                  </button>
+                  @if (auth.isOwner()) {
+                    <button class="icon-action-btn edit" (click)="startEdit(sp)" title="Edit">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  }
                   @if (sp.active) {
                     <button class="icon-action-btn deactivate" (click)="deactivateSp(sp)" title="Deactivate">
                       <mat-icon>block</mat-icon>
                     </button>
-                  } @else {
+                  } @else if (auth.isOwner()) {
                     <button class="icon-action-btn activate" (click)="activateSp(sp)" title="Activate">
                       <mat-icon>check_circle</mat-icon>
                     </button>
@@ -67,15 +69,20 @@ import { UserService, AppUser } from '../../core/services/user.service';
             </div>
           }
         </div>
-        <div class="add-row">
-          <input class="add-input" [(ngModel)]="newSpName" placeholder="New salesperson name"
-            (keydown.enter)="addSalesperson()" />
-          <button mat-flat-button class="add-btn" (click)="addSalesperson()" [disabled]="!newSpName.trim()">
-            <mat-icon>add</mat-icon> Add
-          </button>
-        </div>
+        @if (auth.isOwner()) {
+          <div class="add-row">
+            <input class="add-input" [(ngModel)]="newSpName" placeholder="New salesperson name"
+              (keydown.enter)="addSalesperson()" />
+            <button mat-flat-button class="add-btn" (click)="addSalesperson()" [disabled]="!newSpName.trim()">
+              <mat-icon>add</mat-icon> Add
+            </button>
+          </div>
+        } @else {
+          <p class="settings-hint">Cashiers can deactivate salespeople who are no longer present. An owner can reactivate them.</p>
+        }
       </mat-card>
 
+      @if (auth.isOwner()) {
       <!-- Day Salary Workers -->
       <mat-card class="settings-card">
         <h3 class="section-title">Day Salary Workers</h3>
@@ -122,7 +129,8 @@ import { UserService, AppUser } from '../../core/services/user.service';
           </button>
         </div>
       </mat-card>
-      } <!-- end @if (auth.isOwner()) — salespersons + workers -->
+      }
+      } <!-- end @if (auth.isOwner() || auth.isCashier()) — salespersons -->
 
       <!-- Printer Settings -->
       <mat-card class="settings-card">
@@ -849,7 +857,7 @@ export class SettingsComponent implements OnInit {
   deactivateSp(sp: Salesperson) {
     const ref = this.snack.open(`Deactivate "${sp.name}"?`, 'Deactivate', { duration: 4000 });
     ref.onAction().subscribe(() => {
-      this.spService.update(sp.id, sp.name, false).subscribe(() => {
+      this.spService.deactivate(sp.id).subscribe(() => {
         this.spService.getAll().subscribe(s => this.salespersons = s);
         this.snack.open('Salesperson deactivated', '', { duration: 1500 });
       });

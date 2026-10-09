@@ -380,10 +380,6 @@ export class PrintService {
     receipt += FEED5;
     receipt += CUT;
 
-    if (sale.paymentMethod === 'CASH') {
-      receipt += this.drawerCommand();
-    }
-
     await this.rawPrint(this.config.receiptPrinterName, receipt);
   }
 

@@ -29,12 +29,20 @@ export const storePersonGuard: CanActivateFn = () => {
 export const needsGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  if (auth.isOwner() || auth.isSalesperson()) return true;
+  if (auth.isOwner() || auth.isSalesperson() || auth.isCashier()) return true;
   router.navigate([auth.defaultRoute()]);
   return false;
 };
 
 export const cashierOrOwnerGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (auth.isOwner() || auth.isCashier()) return true;
+  router.navigate([auth.defaultRoute()]);
+  return false;
+};
+
+export const ownerCashierSettingsGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
   if (auth.isOwner() || auth.isCashier()) return true;

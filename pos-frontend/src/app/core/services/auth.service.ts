@@ -82,11 +82,12 @@ export class AuthService {
 
   canAddNeeds(): boolean {
     const r = this.currentUser()?.role;
-    return r === 'OWNER' || r === 'SALESPERSON';
+    return r === 'OWNER' || r === 'SALESPERSON' || r === 'CASHIER';
   }
 
   defaultRoute(): string {
     switch (this.currentUser()?.role) {
+      case 'OWNER':         return '/dashboard';
       case 'SALESPERSON':  return '/needs';
       case 'STORE_PERSON': return '/store-needs';
       default:             return '/pos';

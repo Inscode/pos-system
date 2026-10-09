@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +30,7 @@ public class ExpenseController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<Expense>>> getByDate(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        LocalDate d = date != null ? date : LocalDate.now();
+        LocalDate d = date != null ? date : LocalDate.now(ZoneId.of("Asia/Colombo"));
         return ResponseEntity.ok(ApiResponse.ok(expenseService.getByDate(d)));
     }
 
@@ -43,7 +44,7 @@ public class ExpenseController {
     @GetMapping("/summary/daily")
     public ResponseEntity<ApiResponse<Map<String, Double>>> dailySummary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(ApiResponse.ok(expenseService.getDailySummary(date != null ? date : LocalDate.now())));
+        return ResponseEntity.ok(ApiResponse.ok(expenseService.getDailySummary(date != null ? date : LocalDate.now(ZoneId.of("Asia/Colombo")))));
     }
 
     @GetMapping("/summary/monthly")

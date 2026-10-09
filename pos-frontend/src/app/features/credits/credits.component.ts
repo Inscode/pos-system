@@ -9,7 +9,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { SaleService } from '../../core/services/sale.service';
+import { QuickSaleService, SaleService } from '../../core/services/sale.service';
 import { CreditPaymentDialogComponent } from './credit-payment-dialog/credit-payment-dialog.component';
 
 @Component({
@@ -46,12 +46,14 @@ import { CreditPaymentDialogComponent } from './credit-payment-dialog/credit-pay
             <p>{{ search ? 'No matching credits.' : 'No pending credit sales.' }}</p>
           </div>
         } @else {
-          @for (sale of filtered; track sale.id) {
+          @for (sale of filtered; track (sale.quickSale ? 'q' : 's') + sale.id) {
             <div class="credit-row">
               <div class="credit-left">
                 <div class="sale-id">#{{ sale.id }}</div>
                 <div class="sale-info">
                   <span class="customer-name">{{ sale.customerName || 'Unknown Customer' }}</span>
+                  @if (sale.customerPhone) { <span class="customer-contact">Phone: {{ sale.customerPhone }}</span> }
+                  @if (sale.customerAddress) { <span class="customer-contact">{{ sale.customerAddress }}</span> }
                   <span class="sale-date">{{ sale.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
                   <span class="sale-type" [class]="sale.saleType?.toLowerCase()">{{ sale.saleType }}</span>
                 </div>
@@ -89,6 +91,7 @@ import { CreditPaymentDialogComponent } from './credit-payment-dialog/credit-pay
     .sale-id { font-weight: 700; color: #1b3050; min-width: 50px; font-size: 15px; }
     .sale-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .customer-name { font-weight: 600; font-size: 14px; color: #1b3050; }
+    .customer-contact { font-size: 12px; color: #64748b; }
     .sale-date { font-size: 12px; color: #888; }
     .sale-type { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; align-self: flex-start; }
     .sale-type.retail { background: #e3f2fd; color: #1565c0; }
@@ -118,6 +121,7 @@ import { CreditPaymentDialogComponent } from './credit-payment-dialog/credit-pay
 })
 export class CreditsComponent implements OnInit {
   private saleService = inject(SaleService);
+  private quickSaleService = inject(QuickSaleService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
 
@@ -156,8 +160,13 @@ export class CreditsComponent implements OnInit {
       data: { sale }
     }).afterClosed().subscribe(paid => {
       if (paid) {
-        this.snack.open('Payment recorded', '', { duration: 2000 });
-        this.load();
+        const request = sale.quickSale
+          ? this.quickSaleService.recordPayment(sale.id, paid)
+          : this.saleService.recordPayment(sale.id, paid);
+        request.subscribe({
+          next: () => { this.snack.open('Payment recorded', '', { duration: 2000 }); this.load(); },
+          error: () => this.snack.open('Failed to record payment', 'OK', { duration: 3000 })
+        });
       }
     });
   }

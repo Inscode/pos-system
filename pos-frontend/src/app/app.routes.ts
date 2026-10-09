@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, ownerGuard, storePersonGuard, needsGuard, cashierOrOwnerGuard } from './core/guards/auth.guard';
+import { authGuard, ownerGuard, storePersonGuard, needsGuard, cashierOrOwnerGuard, ownerCashierSettingsGuard } from './core/guards/auth.guard';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
@@ -18,6 +18,7 @@ export const routes: Routes = [
     loadComponent: () => import('./layout/main-layout/main-layout.component').then(m => m.MainLayoutComponent),
     canActivate: [authGuard],
     children: [
+      { path: 'dashboard',           loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), canActivate: [ownerGuard] },
       { path: 'pos',                 loadComponent: () => import('./features/pos/pos.component').then(m => m.PosComponent) },
       { path: 'products',            loadComponent: () => import('./features/products/product-list/product-list.component').then(m => m.ProductListComponent) },
       { path: 'customers',           loadComponent: () => import('./features/customers/customer-list/customer-list.component').then(m => m.CustomerListComponent) },
@@ -34,7 +35,7 @@ export const routes: Routes = [
       { path: 'demand-products',     loadComponent: () => import('./features/demand-products/demand-products.component').then(m => m.DemandProductsComponent), canActivate: [cashierOrOwnerGuard] },
       { path: 'needs',               loadComponent: () => import('./features/needs/needs.component').then(m => m.NeedsComponent), canActivate: [needsGuard] },
       { path: 'store-needs',         loadComponent: () => import('./features/store-needs/store-needs.component').then(m => m.StoreNeedsComponent), canActivate: [storePersonGuard] },
-      { path: 'settings',            loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent), canActivate: [ownerGuard] },
+      { path: 'settings',            loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent), canActivate: [ownerCashierSettingsGuard] },
       { path: '',                    canActivate: [roleRedirect], component: class {} }
     ]
   },

@@ -14,6 +14,7 @@ public interface QuickSaleItemRepository extends JpaRepository<QuickSaleItem, Lo
         SELECT MIN(qi.name), SUM(qi.quantity), SUM(qi.subtotal)
         FROM QuickSaleItem qi
         WHERE qi.quickSale.createdAt BETWEEN :from AND :to
+          AND qi.quickSale.status <> 'CANCELLED'
           AND qi.productId IS NULL
         GROUP BY LOWER(qi.name)
         ORDER BY SUM(qi.subtotal) DESC

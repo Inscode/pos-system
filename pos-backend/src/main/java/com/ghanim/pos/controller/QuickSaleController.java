@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -33,5 +34,21 @@ public class QuickSaleController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(quickSaleService.getById(id)));
+    }
+
+    @PostMapping("/{id}/pay")
+    public ResponseEntity<ApiResponse<Void>> recordPayment(
+            @PathVariable Long id,
+            @RequestBody Map<String, BigDecimal> body) {
+        quickSaleService.recordPayment(id, body.get("amount"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Payment recorded"));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<Void>> cancel(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        quickSaleService.cancel(id, body.get("pin"), body.get("reason"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Quick sale cancelled"));
     }
 }

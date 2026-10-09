@@ -24,7 +24,11 @@ public class QuickSaleService {
     private final SalespersonRepository salespersonRepository;
     private final ProductRepository productRepository;
     private final ManualProductRepository manualProductRepository;
+    private final CustomerRepository customerRepository;
     private final StockService stockService;
+
+    @org.springframework.beans.factory.annotation.Value("${pos.manager.pin:1234}")
+    private String managerPin;
 
     @Transactional
     public Map<String, Object> create(Map<String, Object> request) {
@@ -32,6 +36,21 @@ public class QuickSaleService {
         if (spIdRaw == null) throw new IllegalArgumentException("salespersonId is required");
         Long salespersonId = Long.valueOf(spIdRaw.toString());
         String paymentMethod = request.getOrDefault("paymentMethod", "CASH").toString();
+        Customer customer = null;
+        Object customerIdRaw = request.get("customerId");
+        if ("CREDIT".equals(paymentMethod) && customerIdRaw == null) {
+            throw new IllegalArgumentException("Select a saved customer for quick sale credit");
+        }
+        if (customerIdRaw != null) {
+            Long customerId = Long.valueOf(customerIdRaw.toString());
+            customer = customerRepository.findById(customerId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+            if ("CREDIT".equals(paymentMethod) && !customer.isActive()) {
+                throw new IllegalArgumentException("Select an active customer for quick sale credit");
+            }
+        }
+        String customerName = customer != null ? customer.getName()
+                : request.get("customerName") != null ? request.get("customerName").toString().trim() : null;
         Object totalRaw = request.get("total");
         if (totalRaw == null) throw new IllegalArgumentException("total is required");
         BigDecimal total = new BigDecimal(totalRaw.toString());
@@ -51,6 +70,9 @@ public class QuickSaleService {
                 .salesperson(salesperson)
                 .total(total)
                 .paymentMethod(paymentMethod)
+                .customerName(customerName)
+                .customer(customer)
+                .status("CREDIT".equals(paymentMethod) ? "CREDIT" : "COMPLETED")
                 .cashTendered(cashTendered)
                 .changeAmount(changeAmount)
                 .notes(notes)
@@ -91,6 +113,7 @@ public class QuickSaleService {
                     unitPrice = lineTotal.divide(qty, 2, RoundingMode.HALF_UP);
                     manualProduct = manualProductRepository.findByNameIgnoreCase(name).orElse(null);
                     if (manualProduct == null) manualProduct = ManualProduct.builder().name(name).build();
+                    manualProduct.setActive(true);
                     manualProduct.setUnitPrice(unitPrice);
                     manualProduct = manualProductRepository.save(manualProduct);
                 }
@@ -148,11 +171,68 @@ public class QuickSaleService {
         return toDetail(sale);
     }
 
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getCredits() {
+        return quickSaleRepository.findByStatusOrderByCreatedAtDesc("CREDIT")
+                .stream().map(this::toSummary).toList();
+    }
+
+    @Transactional
+    public void recordPayment(Long id, BigDecimal amount) {
+        QuickSale sale = quickSaleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Quick sale not found: " + id));
+        if (!"CREDIT".equals(sale.getStatus())) {
+            throw new IllegalArgumentException("Quick sale is not a pending credit");
+        }
+        if (amount == null || amount.compareTo(sale.getTotal()) < 0) {
+            throw new IllegalArgumentException("Payment must cover the outstanding quick sale credit");
+        }
+        sale.setStatus("COMPLETED");
+        sale.setCashTendered(amount);
+        sale.setChangeAmount(amount.subtract(sale.getTotal()));
+        quickSaleRepository.save(sale);
+    }
+
+    @Transactional
+    public void cancel(Long id, String pin, String reason) {
+        if (pin == null || !managerPin.equals(pin)) {
+            throw new IllegalArgumentException("Incorrect manager PIN");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Cancellation reason is required");
+        }
+        QuickSale sale = quickSaleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Quick sale not found: " + id));
+        if (!"COMPLETED".equals(sale.getStatus()) && !"CREDIT".equals(sale.getStatus())) {
+            throw new IllegalArgumentException("Quick sale cannot be cancelled");
+        }
+
+        sale.setStatus("CANCELLED");
+        sale.setCancelReason(reason.trim());
+        sale.setCancelledAt(LocalDateTime.now(ZoneId.of("Asia/Colombo")));
+        quickSaleRepository.save(sale);
+
+        sale.getItems().stream()
+                .filter(item -> item.getProductId() != null)
+                .forEach(item -> productRepository.findById(item.getProductId())
+                        .ifPresent(product -> stockService.addShopStock(product, item.getQuantity())));
+    }
+
     private Map<String, Object> toSummary(QuickSale s) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", s.getId());
         m.put("total", s.getTotal());
         m.put("paymentMethod", s.getPaymentMethod());
+        m.put("customerName", s.getCustomerName());
+        m.put("customerId", s.getCustomer() != null ? s.getCustomer().getId() : null);
+        m.put("customerPhone", s.getCustomer() != null ? s.getCustomer().getPhone() : null);
+        m.put("customerAddress", s.getCustomer() != null ? s.getCustomer().getAddress() : null);
+        m.put("status", s.getStatus());
+        m.put("cancelReason", s.getCancelReason());
+        m.put("cancelledAt", s.getCancelledAt() != null
+                ? s.getCancelledAt().atZone(ZoneId.of("Asia/Colombo")).toOffsetDateTime() : null);
+        m.put("saleType", "QUICK SALE");
+        m.put("quickSale", true);
         m.put("notes", s.getNotes());
         m.put("createdAt", s.getCreatedAt() != null
                 ? s.getCreatedAt().atZone(ZoneId.of("Asia/Colombo")).toOffsetDateTime() : null);

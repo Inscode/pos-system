@@ -6,11 +6,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SalespersonService, ProductService } from '../../../../core/services/product.service';
 import { QuickSaleService } from '../../../../core/services/sale.service';
+import { CustomerService } from '../../../../core/services/customer.service';
+import { Customer } from '../../../../core/models/customer.model';
 import { ReceiptDialogComponent } from '../receipt-dialog/receipt-dialog.component';
 
 interface QsItem {
@@ -31,7 +34,7 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatAutocompleteModule,
     MatProgressSpinnerModule, MatSnackBarModule
   ],
   template: `
@@ -116,7 +119,7 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
                 <div class="item-qty">
                   <button class="qty-btn" (click)="changeQty(i, -1)">−</button>
                   <input class="qty-inp" type="number" [(ngModel)]="item.quantity"
-                    (input)="recalc()" min="0.5" step="1" />
+                    (input)="onQuantityInput(i)" min="0.5" step="1" />
                   <button class="qty-btn" (click)="changeQty(i, 1)">+</button>
                 </div>
                 @if (!item.fromStock && !item.manualProductId) {
@@ -164,6 +167,39 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
           <button class="pay-btn" [class.active]="paymentMethod === 'CREDIT'" (click)="paymentMethod = 'CREDIT'; calcChange()">CREDIT</button>
         </div>
 
+        @if (paymentMethod === 'CREDIT') {
+          <mat-form-field appearance="outline" class="full customer-field">
+            <mat-label>Customer *</mat-label>
+            <mat-icon matPrefix>person</mat-icon>
+            <input matInput [ngModel]="customerSearch" (ngModelChange)="onCustomerSearch($event)"
+              [matAutocomplete]="customerAuto" placeholder="Search saved customers by name or phone..." />
+            @if (selectedCustomer) {
+              <button matSuffix mat-icon-button type="button" aria-label="Clear selected customer" (click)="clearCustomer()">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+            <mat-autocomplete #customerAuto="matAutocomplete" (optionSelected)="selectCustomer($event.option.value)">
+              @for (customer of filteredCustomers; track customer.id) {
+                <mat-option [value]="customer">
+                  <span class="customer-option"><strong>{{ customer.name }}</strong>
+                    @if (customer.phone) { <small>{{ customer.phone }}</small> }
+                    @if (customer.address) { <small>{{ customer.address }}</small> }
+                  </span>
+                </mat-option>
+              }
+              @if (filteredCustomers.length === 0 && customerSearch.trim()) {
+                <mat-option disabled>No saved customer found</mat-option>
+              }
+            </mat-autocomplete>
+            @if (selectedCustomer) {
+              <mat-hint>{{ selectedCustomer.phone || 'No phone on file' }}{{ selectedCustomer.address ? ' · ' + selectedCustomer.address : '' }}</mat-hint>
+            } @else {
+              <mat-hint class="credit-error">Select an existing customer to record credit.</mat-hint>
+            }
+          </mat-form-field>
+          <p class="credit-hint">The saved customer record, including phone and address, will be linked to this credit.</p>
+        }
+
         <!-- Cash section -->
         <div class="cash-section" *ngIf="paymentMethod === 'CASH'">
           <div class="cash-label">Cash Tendered</div>
@@ -186,7 +222,8 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
 
       <div class="qs-actions">
         <button class="cancel-btn" (click)="dialogRef.close()">CANCEL</button>
-        <button class="submit-btn" (click)="submit()" [disabled]="submitting || !canSubmit()">
+        <button class="submit-btn" (click)="submit()"
+          [disabled]="submitting || !canSubmit() || (paymentMethod === 'CREDIT' && !selectedCustomer)">
           <mat-spinner diameter="18" *ngIf="submitting"></mat-spinner>
           <mat-icon *ngIf="!submitting">check</mat-icon>
           RECORD SALE
@@ -195,9 +232,9 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
     </div>
   `,
   styles: [`
-    .qs-wrap { width: 540px; display: flex; flex-direction: column; max-height: 90vh; }
+    .qs-wrap { width: min(540px, 92vw); display: flex; flex-direction: column; max-height: 90vh; min-height:0; overflow:hidden; }
     .qs-title { font-size: 18px; font-weight: 700; color: #1b3050; margin: 0; padding: 20px 24px 12px; border-bottom: 1px solid #f0f0f0; }
-    .qs-body { flex: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+    .qs-body { flex: 1 1 auto; min-height:0; overflow-y: auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding: 16px 24px; display: flex; flex-direction: column; gap: 10px; }
     .full { width: 100%; }
 
     .section-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -277,6 +314,14 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
     .pay-methods { display: flex; gap: 8px; }
     .pay-btn { flex: 1; padding: 8px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: #6b7280; transition: all 0.15s; }
     .pay-btn.active { background: #1b3050; color: white; border-color: #1b3050; }
+    .customer-label { font-size: 12px; font-weight: 600; color: #374151; }
+    .customer-label span { color: #b45309; font-weight: 500; }
+    .credit-error { margin: -6px 0 0; color: #b91c1c; font-size: 12px; }
+    .credit-hint { margin: -4px 0 0; color: #8a5a00; font-size: 12px; }
+    .customer-field { width: 100%; margin: 0; }
+    .customer-option { display: flex; flex-direction: column; line-height: 1.35; padding: 3px 0; }
+    .customer-option strong { color: #1b3050; font-size: 13px; }
+    .customer-option small { color: #6b7280; font-size: 11px; }
 
     /* Cash */
     .cash-section { display: flex; flex-direction: column; gap: 8px; }
@@ -296,7 +341,7 @@ interface ManualProductOption { id: number; name: string; unitPrice: number; }
     .notes-inp:focus { outline: none; border-color: #1b3050; }
 
     /* Actions */
-    .qs-actions { display: flex; gap: 10px; padding: 12px 24px 16px; border-top: 1px solid #f0f0f0; justify-content: flex-end; }
+    .qs-actions { display: flex; flex:0 0 auto; gap: 10px; padding: 12px 24px 16px; border-top: 1px solid #f0f0f0; justify-content: flex-end; background:#fff; }
     .cancel-btn { background: none; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 20px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: #6b7280; transition: all 0.15s; }
     .cancel-btn:hover { border-color: #9ca3af; color: #374151; }
     .submit-btn { background: #16a34a; color: white; border: none; border-radius: 8px; padding: 10px 24px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.15s; }
@@ -317,11 +362,17 @@ export class QuickSaleDialogComponent implements OnInit {
   private spService = inject(SalespersonService);
   private productService = inject(ProductService);
   private quickSaleService = inject(QuickSaleService);
+  private customerService = inject(CustomerService);
   private snack = inject(MatSnackBar);
 
   salespersons: any[] = [];
   salespersonId: number | null = null;
   paymentMethod = 'CASH';
+  customerName = '';
+  customers: Customer[] = [];
+  filteredCustomers: Customer[] = [];
+  selectedCustomer: Customer | null = null;
+  customerSearch = '';
   manualTotal: number | null = null;
   cashTendered: number | null = null;
   change = 0;
@@ -367,6 +418,10 @@ export class QuickSaleDialogComponent implements OnInit {
       this.salespersons = s.filter((sp: any) => sp.active);
     });
     this.quickSaleService.getManualProducts().subscribe({ next: items => this.manualProducts = items, error: () => this.manualProducts = [] });
+    this.customerService.getAll().subscribe({
+      next: customers => { this.customers = customers; this.filteredCustomers = customers; },
+      error: () => { this.customers = []; this.filteredCustomers = []; }
+    });
     this.productService.getAll().subscribe({
       next: p => {
         this.allProducts = p;
@@ -375,6 +430,29 @@ export class QuickSaleDialogComponent implements OnInit {
       },
       error: () => { this.productsLoaded = true; }
     });
+  }
+
+  onCustomerSearch(value: string) {
+    this.customerSearch = value;
+    this.selectedCustomer = null;
+    const query = value.trim().toLocaleLowerCase();
+    this.filteredCustomers = query
+      ? this.customers.filter(customer =>
+          customer.name.toLocaleLowerCase().includes(query) || (customer.phone || '').toLocaleLowerCase().includes(query))
+      : this.customers;
+  }
+
+  selectCustomer(customer: Customer) {
+    this.selectedCustomer = customer;
+    this.customerName = customer.name;
+    this.customerSearch = customer.name;
+  }
+
+  clearCustomer() {
+    this.selectedCustomer = null;
+    this.customerName = '';
+    this.customerSearch = '';
+    this.filteredCustomers = this.customers;
   }
 
   addProduct(p: any) {
@@ -437,11 +515,25 @@ export class QuickSaleDialogComponent implements OnInit {
   changeQty(i: number, delta: number) {
     const item = this.items[i];
     item.quantity = Math.max(0.5, (item.quantity || 1) + delta);
-    if (!item.fromStock && !item.manualProductId) this.recalcManual(i);
+    if (!item.fromStock && !item.manualProductId) this.syncManualLineTotal(i);
     this.calcChange();
   }
 
   recalc() { this.calcChange(); }
+
+  onQuantityInput(index: number) {
+    const item = this.items[index];
+    if (!item.fromStock && !item.manualProductId) this.syncManualLineTotal(index);
+    this.calcChange();
+  }
+
+  private syncManualLineTotal(index: number) {
+    const item = this.items[index];
+    const quantity = Number(item.quantity);
+    item.manualLineTotal = quantity > 0
+      ? Math.round(quantity * item.unitPrice * 100) / 100
+      : 0;
+  }
 
   recalcManual(index: number) {
     const item = this.items[index];
@@ -462,17 +554,24 @@ export class QuickSaleDialogComponent implements OnInit {
 
   canSubmit(): boolean {
     if (!this.salespersonId) return false;
+    if (this.paymentMethod === 'CREDIT' && !this.selectedCustomer) return false;
     if (this.validItems.length > 0) return true;
     return (this.manualTotal ?? 0) > 0;
   }
 
   async submit() {
+    if (this.paymentMethod === 'CREDIT' && !this.selectedCustomer) {
+      this.snack.open('Select a saved customer before recording a credit sale', 'OK', { duration: 3000 });
+      return;
+    }
     if (!this.canSubmit()) return;
     this.submitting = true;
 
     const payload = {
       salespersonId: this.salespersonId,
       paymentMethod: this.paymentMethod,
+      customerId: this.paymentMethod === 'CREDIT' ? this.selectedCustomer?.id : null,
+      customerName: this.paymentMethod === 'CREDIT' ? this.selectedCustomer?.name : null,
       total: this.effectiveTotal,
       notes: this.notes || null,
       cashTendered: this.paymentMethod === 'CASH' && this.cashTendered ? this.cashTendered : null,
@@ -501,6 +600,7 @@ export class QuickSaleDialogComponent implements OnInit {
               salesperson: sp?.name ?? '',
               saleType: 'QUICK SALE',
               paymentMethod: this.paymentMethod,
+              customerName: sale.customerName ?? (this.customerName.trim() || undefined),
               cashTendered: this.cashTendered,
             },
             _items: (sale.items ?? []).map((i: any) => ({
@@ -511,6 +611,7 @@ export class QuickSaleDialogComponent implements OnInit {
             _changeAmount: this.change > 0 ? this.change : 0,
             _itemDiscount: 0,
             _autoPrint: false,
+            _openDrawerOnEntry: this.paymentMethod === 'CASH',
           }
         });
       },

@@ -15,7 +15,7 @@ public class SalespersonService {
     private final SalespersonRepository salespersonRepository;
 
     public List<Salesperson> getAll() {
-        return salespersonRepository.findByActiveTrue();
+        return salespersonRepository.findAllByOrderByNameAsc();
     }
 
     public Salesperson create(String name) {
@@ -27,6 +27,13 @@ public class SalespersonService {
                 .orElseThrow(() -> new ResourceNotFoundException("Salesperson not found: " + id));
         sp.setName(name);
         sp.setActive(active);
+        return salespersonRepository.save(sp);
+    }
+
+    public Salesperson deactivate(Long id) {
+        Salesperson sp = salespersonRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Salesperson not found: " + id));
+        sp.setActive(false);
         return salespersonRepository.save(sp);
     }
 }

@@ -325,6 +325,7 @@ export class SidebarComponent {
 
   private navItems: NavItem[] = [
     // OWNER + CASHIER routes
+    { label: 'Dashboard',    icon: 'dashboard',              route: '/dashboard',         roles: ['OWNER'] },
     { label: 'POS',          icon: 'point_of_sale',         route: '/pos',                roles: ['OWNER', 'CASHIER'] },
     { label: 'Products',     icon: 'inventory_2',            route: '/products',           roles: ['OWNER', 'CASHIER', 'SALESPERSON'] },
     { label: 'Customers',    icon: 'people',                 route: '/customers',          roles: ['OWNER', 'CASHIER'] },
@@ -340,10 +341,10 @@ export class SidebarComponent {
     { label: 'Shop Supplies',icon: 'shopping_bag',           route: '/shop-supplies',      roles: ['OWNER', 'CASHIER'] },
     { label: 'Demand Products',icon: 'how_to_vote',           route: '/demand-products',    roles: ['OWNER', 'CASHIER'] },
     // SALESPERSON route
-    { label: 'Needs List',   icon: 'checklist',              route: '/needs',              roles: ['OWNER', 'SALESPERSON'] },
+    { label: 'Needs List',   icon: 'checklist',              route: '/needs',              roles: ['OWNER', 'SALESPERSON', 'CASHIER'] },
     // STORE_PERSON route
     { label: 'Store Needs',  icon: 'warehouse',              route: '/store-needs',        roles: ['OWNER', 'STORE_PERSON'] },
-    { label: 'Settings',     icon: 'settings',               route: '/settings',           roles: ['OWNER'] },
+    { label: 'Settings',     icon: 'settings',               route: '/settings',           roles: ['OWNER', 'CASHIER'] },
   ];
 
   private get role(): string { return this.auth.currentUser()?.role ?? ''; }
@@ -351,7 +352,7 @@ export class SidebarComponent {
   private isMobileMain(route: string): boolean {
     if (this.auth.isSalesperson()) return ['/needs', '/products'].includes(route);
     if (this.auth.isStorePerson()) return ['/store-needs'].includes(route);
-    return ['/pos', '/sales', '/reports', '/expenses', '/needs'].includes(route);
+    return ['/dashboard', '/pos', '/sales', '/reports', '/expenses', '/needs'].includes(route);
   }
 
   private isVisible(item: NavItem): boolean {

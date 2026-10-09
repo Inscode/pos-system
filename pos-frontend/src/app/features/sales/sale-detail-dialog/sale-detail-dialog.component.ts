@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CancelSaleDialogComponent } from '../cancel-sale-dialog/cancel-sale-dialog.component';
 import { PrintService } from '../../../core/services/print.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-sale-detail-dialog',
@@ -15,6 +16,7 @@ import { PrintService } from '../../../core/services/print.service';
     MatSnackBarModule, MatProgressSpinnerModule, CancelSaleDialogComponent],
   template: `
     <div class="detail-wrap">
+      <div class="detail-content">
       <div class="detail-header">
         <div>
           <h2>Sale #{{ sale.id }}</h2>
@@ -28,6 +30,9 @@ import { PrintService } from '../../../core/services/print.service';
         <div class="meta-row"><span>Payment</span><span>{{ sale.paymentMethod }}</span></div>
         @if (sale.customerName) {
           <div class="meta-row"><span>Customer</span><span>{{ sale.customerName }}</span></div>
+        }
+        @if (sale.status === 'CANCELLED' && sale.cancelReason) {
+          <div class="meta-row"><span>Cancellation reason</span><span>{{ sale.cancelReason }}</span></div>
         }
       </div>
 
@@ -72,6 +77,7 @@ import { PrintService } from '../../../core/services/print.service';
           <div class="total-row"><span>Change</span><span>LKR {{ sale.changeAmount | number:'1.2-2' }}</span></div>
         }
       </div>
+      </div>
 
       <div mat-dialog-actions class="detail-actions">
         <button mat-button (click)="dialogRef.close()">CLOSE</button>
@@ -82,6 +88,12 @@ import { PrintService } from '../../../core/services/print.service';
           </button>
         }
         @if (sale.status === 'COMPLETED') {
+          @if (!isQuickSale || isOwner) {
+            <button mat-stroked-button class="cancel-btn" (click)="cancelSale()">
+              CANCEL SALE
+            </button>
+          }
+        } @else if (isQuickSale && sale.status === 'CREDIT' && isOwner) {
           <button mat-stroked-button class="cancel-btn" (click)="cancelSale()">
             CANCEL SALE
           </button>
@@ -90,7 +102,8 @@ import { PrintService } from '../../../core/services/print.service';
     </div>
   `,
   styles: [`
-    .detail-wrap { min-width: 460px; padding: 20px 24px; }
+    .detail-wrap { display:flex; flex-direction:column; min-width:min(460px, 92vw); max-height:90vh; padding:20px 24px; box-sizing:border-box; overflow:hidden; }
+    .detail-content { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
     .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
     h2 { font-size: 20px; font-weight: 700; color: #1b3050; margin: 0; }
     .sub { font-size: 12px; color: #888; margin: 4px 0 0; }
@@ -115,16 +128,21 @@ import { PrintService } from '../../../core/services/print.service';
     .total-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
     .total-row.disc { color: #c62828; }
     .total-row.grand { font-weight: 700; font-size: 16px; color: #1b3050; border-top: 1px solid #eee; margin-top: 4px; padding-top: 8px; }
-    .detail-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 16px; }
+    .detail-actions { display: flex; flex:0 0 auto; gap: 8px; justify-content: flex-end; padding-top: 16px; background:#fff; }
     .cancel-btn { color: #c62828 !important; border-color: #c62828 !important; }
   `]
 })
 export class SaleDetailDialogComponent {
   dialogRef = inject(MatDialogRef<SaleDetailDialogComponent>);
-  sale: any = inject(MAT_DIALOG_DATA).sale;
+  data: any = inject(MAT_DIALOG_DATA);
+  sale: any = this.data.sale;
+  isQuickSale = this.data.isQuickSale === true;
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
   private printService = inject(PrintService);
+  private auth = inject(AuthService);
+
+  get isOwner(): boolean { return this.auth.isOwner(); }
 
   reprinting = false;
 
@@ -163,11 +181,11 @@ export class SaleDetailDialogComponent {
   cancelSale() {
     const ref = this.dialog.open(CancelSaleDialogComponent, {
       width: '420px',
-      data: { saleId: this.sale.id }
+      data: { saleId: this.sale.id, quickSale: this.isQuickSale }
     });
     ref.afterClosed().subscribe(result => {
       if (result === 'cancelled') {
-        this.snack.open('Sale cancelled and stock restored', '', { duration: 2500 });
+        this.snack.open(`${this.isQuickSale ? 'Quick sale' : 'Sale'} cancelled and stock restored`, '', { duration: 2500 });
         this.dialogRef.close('cancelled');
       }
     });

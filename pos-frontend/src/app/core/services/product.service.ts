@@ -119,6 +119,10 @@ export class SalespersonService {
   update(id: number, name: string, active: boolean): Observable<Salesperson> {
     return this.http.put<any>(`${environment.apiUrl}/salespersons/${id}`, { name, active }).pipe(map(r => r.data));
   }
+
+  deactivate(id: number): Observable<Salesperson> {
+    return this.http.patch<any>(`${environment.apiUrl}/salespersons/${id}/deactivate`, {}).pipe(map(r => r.data));
+  }
 }
 
 @Injectable({ providedIn: 'root' })

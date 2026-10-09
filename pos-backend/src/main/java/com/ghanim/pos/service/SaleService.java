@@ -29,6 +29,7 @@ public class SaleService {
     private final ProductRepository productRepository;
     private final CashMovementRepository cashMovementRepository;
     private final StockService stockService;
+    private final QuickSaleService quickSaleService;
 
     @Transactional
     public Map<String, Object> checkout(CheckoutRequest request) {
@@ -161,8 +162,11 @@ public class SaleService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getCredits() {
-        return saleRepository.findByStatusOrderByCreatedAtDesc("CREDIT")
-                .stream().map(s -> buildSummary(s)).toList();
+        List<Map<String, Object>> credits = new ArrayList<>(saleRepository.findByStatusOrderByCreatedAtDesc("CREDIT")
+                .stream().map(s -> buildSummary(s)).toList());
+        credits.addAll(quickSaleService.getCredits());
+        credits.sort((a, b) -> String.valueOf(b.get("createdAt")).compareTo(String.valueOf(a.get("createdAt"))));
+        return credits;
     }
 
     @Transactional
@@ -191,6 +195,7 @@ public class SaleService {
         m.put("id", s.getId());
         m.put("saleType", s.getSaleType());
         m.put("customerName", s.getCustomerName());
+        m.put("quickSale", false);
         m.put("paymentMethod", s.getPaymentMethod());
         m.put("total", s.getTotal());
         m.put("status", s.getStatus());

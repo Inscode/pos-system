@@ -33,4 +33,9 @@ public class SalespersonController {
         boolean active = body.containsKey("active") ? (boolean) body.get("active") : true;
         return ResponseEntity.ok(ApiResponse.ok(salespersonService.update(id, name, active)));
     }
+
+    @PatchMapping("/{id}/deactivate")
+    public ResponseEntity<ApiResponse<Salesperson>> deactivate(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(salespersonService.deactivate(id), "Salesperson deactivated"));
+    }
 }

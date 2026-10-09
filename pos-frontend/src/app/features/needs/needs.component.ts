@@ -11,6 +11,7 @@ import { ShopSupplyService } from '../../core/services/shop-supply.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PurchaseNeed, NeedStatus, NeedCategory, NeedStoreStatus } from '../../core/models/purchase-need.model';
 import { ShopSupply } from '../../core/models/shop-supply.model';
+import { formatColomboDate } from '../../core/utils/colombo-date.util';
 
 type Tab = 'needed' | 'resolved' | 'all';
 
@@ -165,9 +166,9 @@ type Tab = 'needed' | 'resolved' | 'all';
               <div class="rr-name">{{ selectedNeed.name }}</div>
               <div class="rr-meta">
                 @if (selectedNeed.status === 'NEEDED') {
-                  Pending · Requested by <strong>{{ selectedNeed.requestedBy }}</strong> · {{ selectedNeed.requestedAt | date:'MMM d, h:mm a' }}
+                  Pending · Requested by <strong>{{ selectedNeed.requestedBy }}</strong> · {{ formatNeedDate(selectedNeed.requestedAt) }}
                 } @else if (selectedNeed.status === 'PURCHASED') {
-                  Purchased · Resolved by <strong>{{ selectedNeed.resolvedBy }}</strong> · {{ selectedNeed.resolvedAt | date:'MMM d' }}
+                  Purchased · Resolved by <strong>{{ selectedNeed.resolvedBy }}</strong> · {{ formatNeedDate(selectedNeed.resolvedAt, false) }}
                 } @else {
                   Dismissed · by <strong>{{ selectedNeed.resolvedBy }}</strong>
                 }
@@ -177,7 +178,9 @@ type Tab = 'needed' | 'resolved' | 'all';
             <button class="close-form-btn" (click)="selectedNeed = null"><mat-icon>close</mat-icon></button>
           </div>
           <div class="rr-actions">
-            @if (selectedNeed.status === 'NEEDED') {
+            @if (auth.isCashier()) {
+              <p class="rr-hint">This list is read-only for cashiers. You can add a new need from above.</p>
+            } @else if (selectedNeed.status === 'NEEDED') {
               <p class="rr-hint">This item is already pending. Owner will mark it purchased when done.</p>
               @if (auth.isOwner()) {
                 <button class="action-purchased" (click)="markPurchased(selectedNeed)">
@@ -265,11 +268,11 @@ type Tab = 'needed' | 'resolved' | 'all';
                     @if (need.status === 'NEEDED') {
                       <span>By <strong>{{ need.requestedBy }}</strong></span>
                       <span class="meta-sep">·</span>
-                      <span class="meta-time">{{ need.requestedAt | date:'MMM d, h:mm a' }}</span>
+                      <span class="meta-time">{{ formatNeedDate(need.requestedAt) }}</span>
                     } @else if (need.status === 'PURCHASED') {
                       <span class="meta-resolved">Purchased by <strong>{{ need.resolvedBy }}</strong></span>
                       <span class="meta-sep">·</span>
-                      <span class="meta-time">{{ need.resolvedAt | date:'MMM d' }}</span>
+                      <span class="meta-time">{{ formatNeedDate(need.resolvedAt, false) }}</span>
                     } @else {
                       <span class="meta-resolved">Dismissed by <strong>{{ need.resolvedBy }}</strong></span>
                     }
@@ -315,9 +318,11 @@ type Tab = 'needed' | 'resolved' | 'all';
                     </button>
                   }
                 } @else {
-                  <button class="icon-action rerequest" (click)="reRequest(need)" matTooltip="Need again">
-                    <mat-icon>refresh</mat-icon>
-                  </button>
+                  @if (!auth.isCashier()) {
+                    <button class="icon-action rerequest" (click)="reRequest(need)" matTooltip="Need again">
+                      <mat-icon>refresh</mat-icon>
+                    </button>
+                  }
                   @if (auth.isOwner()) {
                     <button class="icon-action del" (click)="deleteNeed(need)" matTooltip="Delete">
                       <mat-icon>delete_outline</mat-icon>
@@ -605,6 +610,10 @@ export class NeedsComponent implements OnInit {
   private supplyService = inject(ShopSupplyService);
   auth = inject(AuthService);
   private snack = inject(MatSnackBar);
+
+  formatNeedDate(value: string | null | undefined, includeTime = true): string {
+    return formatColomboDate(value, includeTime);
+  }
 
   needs: PurchaseNeed[] = [];
   searchResults: PurchaseNeed[] = [];

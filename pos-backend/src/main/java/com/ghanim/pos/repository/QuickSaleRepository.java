@@ -10,13 +10,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface QuickSaleRepository extends JpaRepository<QuickSale, Long> {
+    List<QuickSale> findByStatusOrderByCreatedAtDesc(String status);
     List<QuickSale> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime from, LocalDateTime to);
+    List<QuickSale> findByCreatedAtBetweenAndStatusNotOrderByCreatedAtDesc(
+            LocalDateTime from, LocalDateTime to, String status);
 
-    long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
+    long countByCreatedAtBetweenAndStatusNot(LocalDateTime from, LocalDateTime to, String status);
 
-    @Query("SELECT COALESCE(SUM(qs.total), 0) FROM QuickSale qs WHERE qs.createdAt BETWEEN :from AND :to")
+    @Query("SELECT COALESCE(SUM(qs.total), 0) FROM QuickSale qs WHERE qs.createdAt BETWEEN :from AND :to AND qs.status <> 'CANCELLED'")
     BigDecimal sumTotalBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    @Query("SELECT COALESCE(SUM(qs.total), 0) FROM QuickSale qs WHERE qs.createdAt BETWEEN :from AND :to AND qs.paymentMethod = 'CASH'")
+    @Query("SELECT COALESCE(SUM(qs.total), 0) FROM QuickSale qs WHERE qs.createdAt BETWEEN :from AND :to AND qs.paymentMethod = 'CASH' AND qs.status <> 'CANCELLED'")
     BigDecimal sumCashBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }

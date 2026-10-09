@@ -52,17 +52,6 @@ public class ReportService {
                 case "CARD" -> cardSales = cardSales.add(sale.getTotal());
                 case "CREDIT" -> creditSales = creditSales.add(sale.getTotal());
             }
-            if (sale.getSalesperson() != null) {
-                Long spId = sale.getSalesperson().getId();
-                Map<String, Object> spData = salespersonMap.computeIfAbsent(spId, k -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("name", sale.getSalesperson().getName());
-                    m.put("salesCount", 0); m.put("totalAmount", BigDecimal.ZERO); m.put("profit", BigDecimal.ZERO);
-                    return m;
-                });
-                spData.put("salesCount", (int) spData.get("salesCount") + 1);
-                spData.put("totalAmount", ((BigDecimal) spData.get("totalAmount")).add(sale.getTotal()));
-            }
             List<SaleItem> items = saleItemRepository.findBySaleId(sale.getId());
             for (SaleItem item : items) {
                 if (item.getProduct() != null && item.getProduct().getCostPrice() != null) {
@@ -71,6 +60,39 @@ public class ReportService {
                             .multiply(item.getQuantity()).subtract(item.getItemDiscount()));
                 }
             }
+        }
+
+        // Include credit sales in salesperson totals even though they are not yet completed/paid.
+        for (Sale sale : saleRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(from, to)) {
+            if (sale.getSalesperson() == null || "CANCELLED".equals(sale.getStatus())) continue;
+            Long spId = sale.getSalesperson().getId();
+            Map<String, Object> spData = salespersonMap.computeIfAbsent(spId, k -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", spId);
+                m.put("name", sale.getSalesperson().getName());
+                m.put("salesCount", 0);
+                m.put("totalAmount", BigDecimal.ZERO);
+                m.put("profit", BigDecimal.ZERO);
+                return m;
+            });
+            spData.put("salesCount", (int) spData.get("salesCount") + 1);
+            spData.put("totalAmount", ((BigDecimal) spData.get("totalAmount")).add(sale.getTotal()));
+        }
+
+        for (QuickSale quickSale : quickSaleRepository.findByCreatedAtBetweenAndStatusNotOrderByCreatedAtDesc(from, to, "CANCELLED")) {
+            if (quickSale.getSalesperson() == null) continue;
+            Long spId = quickSale.getSalesperson().getId();
+            Map<String, Object> spData = salespersonMap.computeIfAbsent(spId, k -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", spId);
+                m.put("name", quickSale.getSalesperson().getName());
+                m.put("salesCount", 0);
+                m.put("totalAmount", BigDecimal.ZERO);
+                m.put("profit", BigDecimal.ZERO);
+                return m;
+            });
+            spData.put("salesCount", (int) spData.get("salesCount") + 1);
+            spData.put("totalAmount", ((BigDecimal) spData.get("totalAmount")).add(quickSale.getTotal()));
         }
 
         // Subtract returns from revenue and profit
@@ -123,7 +145,7 @@ public class ReportService {
 
         BigDecimal quickSaleTotal = quickSaleRepository.sumTotalBetween(from, to);
         BigDecimal quickSaleCash = quickSaleRepository.sumCashBetween(from, to);
-        long quickSaleCount = quickSaleRepository.countByCreatedAtBetween(from, to);
+        long quickSaleCount = quickSaleRepository.countByCreatedAtBetweenAndStatusNot(from, to, "CANCELLED");
 
         report.put("totalProfit", totalProfit);
         report.put("totalExpenses", totalExpenses);
@@ -212,15 +234,34 @@ public class ReportService {
         }).toList();
 
         // Salesperson breakdown
+        Map<Long, Map<String, Object>> salespersonTotals = new HashMap<>();
         List<Object[]> spRows = saleRepository.salespersonSalesBetween(dtFrom, dtTo);
-        List<Map<String, Object>> spBreakdown = spRows.stream().map(row -> {
-            Map<String, Object> d = new LinkedHashMap<>();
-            d.put("id", row[0]);
-            d.put("name", row[1]);
-            d.put("salesCount", ((Number) row[2]).intValue());
-            d.put("totalAmount", row[3]);
-            return d;
-        }).toList();
+        for (Object[] row : spRows) {
+            Long spId = ((Number) row[0]).longValue();
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("id", spId);
+            data.put("name", row[1]);
+            data.put("salesCount", ((Number) row[2]).intValue());
+            data.put("totalAmount", row[3]);
+            salespersonTotals.put(spId, data);
+        }
+        for (QuickSale quickSale : quickSaleRepository.findByCreatedAtBetweenAndStatusNotOrderByCreatedAtDesc(dtFrom, dtTo, "CANCELLED")) {
+            if (quickSale.getSalesperson() == null) continue;
+            Long spId = quickSale.getSalesperson().getId();
+            Map<String, Object> data = salespersonTotals.computeIfAbsent(spId, id -> {
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("id", id);
+                entry.put("name", quickSale.getSalesperson().getName());
+                entry.put("salesCount", 0);
+                entry.put("totalAmount", BigDecimal.ZERO);
+                return entry;
+            });
+            data.put("salesCount", (int) data.get("salesCount") + 1);
+            data.put("totalAmount", ((BigDecimal) data.get("totalAmount")).add(quickSale.getTotal()));
+        }
+        List<Map<String, Object>> spBreakdown = salespersonTotals.values().stream()
+                .sorted((a, b) -> ((BigDecimal) b.get("totalAmount")).compareTo((BigDecimal) a.get("totalAmount")))
+                .toList();
 
         Map<String, Object> report = new LinkedHashMap<>();
         report.put("from", from.toString());
@@ -324,7 +365,7 @@ public class ReportService {
                     .map(Sale::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal quickSaleCash = quickSaleRepository.sumCashBetween(dayStart, dayEnd);
-            long quickSaleCount = quickSaleRepository.countByCreatedAtBetween(dayStart, dayEnd);
+            long quickSaleCount = quickSaleRepository.countByCreatedAtBetweenAndStatusNot(dayStart, dayEnd, "CANCELLED");
             List<CashMovement> movements = cashMovementRepository.findByCreatedAtBetween(dayStart, dayEnd);
             BigDecimal cashIn = sumMovements(movements, "CASH_IN");
             BigDecimal cashOut = sumMovements(movements, "CASH_OUT");

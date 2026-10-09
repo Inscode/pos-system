@@ -18,11 +18,12 @@ import { AuthService } from '../../../../core/services/auth.service';
     <mat-dialog-content>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Cashier Name</mat-label>
-        <input matInput [(ngModel)]="cashierName" placeholder="Enter cashier name" />
+        <input matInput [(ngModel)]="cashierName" placeholder="Enter cashier name" required />
       </mat-form-field>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Opening Float (LKR)</mat-label>
-        <input matInput type="number" [(ngModel)]="openingFloat" min="0" placeholder="0.00" />
+        <input matInput type="number" [(ngModel)]="openingFloat" min="0" step="0.01"
+          placeholder="Enter opening cash amount" required />
       </mat-form-field>
       @if (error) {
         <div class="error-msg">{{ error }}</div>
@@ -30,7 +31,7 @@ import { AuthService } from '../../../../core/services/auth.service';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">CANCEL</button>
-      <button mat-flat-button class="open-btn" (click)="open()" [disabled]="loading || !cashierName">
+      <button mat-flat-button class="open-btn" (click)="open()" [disabled]="!canOpen">
         @if (loading) { <mat-spinner diameter="18" /> } @else { OPEN SESSION }
       </button>
     </mat-dialog-actions>
@@ -57,9 +58,15 @@ export class OpenSessionDialogComponent {
   loading = false;
   error = '';
 
+  get canOpen(): boolean {
+    return !this.loading && !!this.cashierName.trim() && this.openingFloat !== null
+      && Number.isFinite(this.openingFloat) && this.openingFloat >= 0;
+  }
+
   open() {
+    if (!this.canOpen) return;
     this.loading = true;
-    this.sessionService.open(this.cashierName, this.openingFloat || 0).subscribe({
+    this.sessionService.open(this.cashierName.trim(), this.openingFloat!).subscribe({
       next: () => this.dialogRef.close(true),
       error: err => { this.error = err.error?.message || 'Failed to open session'; this.loading = false; }
     });

@@ -35,6 +35,15 @@ public class SessionService {
 
     @Transactional
     public Session openSession(String cashierName, BigDecimal openingFloat) {
+        if (cashierName == null || cashierName.isBlank()) {
+            throw new IllegalArgumentException("Cashier name is required");
+        }
+        if (openingFloat == null) {
+            throw new IllegalArgumentException("Opening cash amount is required");
+        }
+        if (openingFloat.signum() < 0) {
+            throw new IllegalArgumentException("Opening cash amount cannot be negative");
+        }
         sessionRepository.findFirstByStatusOrderByOpenedAtDesc("OPEN").ifPresent(s -> {
             throw new IllegalArgumentException("A session is already open");
         });

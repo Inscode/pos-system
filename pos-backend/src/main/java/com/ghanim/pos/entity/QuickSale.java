@@ -27,6 +27,15 @@ public class QuickSale {
     @Column(nullable = false)
     private String paymentMethod = "CASH";
 
+    private String customerName;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
+
+    @Column(nullable = false)
+    private String status = "COMPLETED";
+
     @Column(precision = 10, scale = 2)
     private BigDecimal cashTendered;
 
@@ -34,6 +43,10 @@ public class QuickSale {
     private BigDecimal changeAmount;
 
     private String notes;
+
+    private String cancelReason;
+
+    private LocalDateTime cancelledAt;
 
     private LocalDateTime createdAt;
 

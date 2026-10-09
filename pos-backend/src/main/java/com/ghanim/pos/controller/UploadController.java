@@ -28,6 +28,11 @@ public class UploadController {
     public ResponseEntity<ApiResponse<Map<String, String>>> upload(
             @RequestParam("file") MultipartFile file) throws Exception {
 
+        if (file.getSize() >= 200L * 1024) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Image must be smaller than 200 KB"));
+        }
+
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Only image files are allowed"));

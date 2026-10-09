@@ -70,6 +70,14 @@ export class QuickSaleService {
   getById(id: number): Observable<any> {
     return this.http.get<any>(`${this.base}/${id}`).pipe(map(r => r.data));
   }
+
+  recordPayment(id: number, amount: number): Observable<void> {
+    return this.http.post<any>(`${this.base}/${id}/pay`, { amount }).pipe(map(() => undefined));
+  }
+
+  cancel(id: number, pin: string, reason: string): Observable<void> {
+    return this.http.post<any>(`${this.base}/${id}/cancel`, { pin, reason }).pipe(map(() => undefined));
+  }
 }
 
 @Injectable({ providedIn: 'root' })

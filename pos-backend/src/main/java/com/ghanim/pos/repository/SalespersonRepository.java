@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface SalespersonRepository extends JpaRepository<Salesperson, Long> {
     List<Salesperson> findByActiveTrue();
+    List<Salesperson> findAllByOrderByNameAsc();
 }

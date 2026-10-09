@@ -2,6 +2,7 @@ import { Component, inject, OnInit, OnDestroy, computed, signal, HostListener, V
 import { Subject, debounceTime, takeUntil } from 'rxjs';
 import { LayoutService } from '../../core/services/layout.service';
 import { BarcodeService } from '../../core/services/barcode.service';
+import { PrintService } from '../../core/services/print.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -66,6 +67,46 @@ import { QuickSaleDialogComponent } from './components/quick-sale-dialog/quick-s
           </div>
         </div>
         <div class="header-right">
+          <div class="printer-picker-wrap" #printerPicker>
+            <button type="button" class="printer-picker-btn" (click)="togglePrinterPicker()"
+              [attr.aria-expanded]="printerPickerOpen" aria-label="Choose printer">
+              <mat-icon>print</mat-icon>
+              <span>{{ activePrinterRole === 'pos' ? 'POS' : 'Barcode' }} · {{ activePrinterName }}</span>
+              <mat-icon class="printer-chevron">{{ printerPickerOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+            @if (printerPickerOpen) {
+              <div class="printer-picker-popover">
+                <div class="printer-role-toggle" role="group" aria-label="Printer type">
+                  <button type="button" [class.active]="activePrinterRole === 'pos'" (click)="activePrinterRole = 'pos'">
+                    <mat-icon>receipt</mat-icon> POS printer
+                  </button>
+                  <button type="button" [class.active]="activePrinterRole === 'barcode'" (click)="activePrinterRole = 'barcode'">
+                    <mat-icon>qr_code_2</mat-icon> Barcode printer
+                  </button>
+                </div>
+                <div class="printer-current-label">{{ activePrinterRole === 'pos' ? 'Receipt printer' : 'Barcode label printer' }}</div>
+                <div class="printer-current-name">{{ activePrinterName || 'Not selected' }}</div>
+                <button type="button" class="printer-refresh-btn" (click)="refreshPrinters()" [disabled]="printerLoading">
+                  <mat-icon>{{ printerLoading ? 'sync' : 'refresh' }}</mat-icon>
+                  {{ printerLoading ? 'Searching…' : 'Find connected printers' }}
+                </button>
+                @if (printerError) { <div class="printer-error">{{ printerError }}</div> }
+                @if (availablePrinters.length) {
+                  <div class="printer-list-label">Available printers</div>
+                  <div class="printer-list">
+                    @for (printer of availablePrinters; track printer) {
+                      <button type="button" class="printer-option" [class.selected]="printer === activePrinterName"
+                        (click)="selectPrinter(printer)">
+                        <span>{{ printer }}</span>
+                        @if (printer === activePrinterName) { <mat-icon>check</mat-icon> }
+                      </button>
+                    }
+                  </div>
+                }
+                <p class="printer-routing-note">Receipts always use the POS printer. Barcode labels use the barcode printer.</p>
+              </div>
+            }
+          </div>
           <button class="quick-sale-header-btn" (click)="openQuickSale()">
             <mat-icon>bolt</mat-icon> Quick Sale
           </button>
@@ -315,8 +356,10 @@ export class PosComponent implements OnInit, AfterViewInit, OnDestroy {
   auth = inject(AuthService);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
+  private printService = inject(PrintService);
 
   @ViewChild('searchInput') searchInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('printerPicker') printerPickerRef!: ElementRef<HTMLElement>;
 
   session = this.sessionService.currentSession;
 
@@ -333,6 +376,11 @@ export class PosComponent implements OnInit, AfterViewInit, OnDestroy {
   loadingProducts = false;
   heldCount = 0;
   mobileCartOpen = false;
+  printerPickerOpen = false;
+  activePrinterRole: 'pos' | 'barcode' = 'pos';
+  availablePrinters: string[] = [];
+  printerLoading = false;
+  printerError = '';
 
   private scanFirstCharTime = 0;
   private searchSubject = new Subject<string>();
@@ -344,6 +392,45 @@ export class PosComponent implements OnInit, AfterViewInit, OnDestroy {
   billDiscountAmt = computed(() => this.itemsTotal() * this.billDiscountPct() / 100);
   cartTotal = computed(() => this.itemsTotal() - this.billDiscountAmt());
 
+  get activePrinterName(): string {
+    const config = this.printService.getConfig();
+    return this.activePrinterRole === 'pos' ? config.receiptPrinterName : config.labelPrinterName;
+  }
+
+  togglePrinterPicker() {
+    this.printerPickerOpen = !this.printerPickerOpen;
+    if (this.printerPickerOpen && !this.availablePrinters.length) this.refreshPrinters();
+  }
+
+  @HostListener('document:click', ['$event'])
+  closePrinterPickerOnOutsideClick(event: MouseEvent) {
+    const target = event.target;
+    if (this.printerPickerOpen && target instanceof Node
+      && !this.printerPickerRef?.nativeElement.contains(target)) {
+      this.printerPickerOpen = false;
+    }
+  }
+
+  async refreshPrinters() {
+    this.printerLoading = true;
+    this.printerError = '';
+    try {
+      this.availablePrinters = await this.printService.getPrinters();
+    } catch (error: any) {
+      this.printerError = error?.message || 'Could not find printers. Check that QZ Tray is running.';
+    } finally {
+      this.printerLoading = false;
+    }
+  }
+
+  selectPrinter(printerName: string) {
+    const config = this.printService.getConfig();
+    if (this.activePrinterRole === 'pos') config.receiptPrinterName = printerName;
+    else config.labelPrinterName = printerName;
+    this.printService.saveConfig(config);
+    this.snack.open(`${this.activePrinterRole === 'pos' ? 'POS' : 'Barcode'} printer set to ${printerName}`, '', { duration: 2200 });
+  }
+
   ngOnInit() {
     this.searchSubject.pipe(debounceTime(300), takeUntil(this.destroy$))
       .subscribe(() => this.loadProducts());
@@ -351,8 +438,8 @@ export class PosComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadProducts();
     this.categoryService.getAll().subscribe(cats => this.categories = cats);
     this.salespersonService.getAll().subscribe(sps => {
-      this.salespersons = sps;
-      if (sps.length) this.selectedSalespersonId = sps[0].id;
+      this.salespersons = sps.filter(sp => sp.active);
+      if (this.salespersons.length) this.selectedSalespersonId = this.salespersons[0].id;
     });
     this.sessionService.loadCurrent().subscribe(s => {
       if (!s && !this.auth.isOwner()) {

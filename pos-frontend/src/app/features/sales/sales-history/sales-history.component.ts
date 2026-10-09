@@ -129,7 +129,9 @@ import { SaleDetailDialogComponent } from '../sale-detail-dialog/sale-detail-dia
                   </div>
                   <div class="sale-method">{{ qs.paymentMethod }}</div>
                   <div class="sale-total">LKR {{ qs.total | number:'1.2-2' }}</div>
-                  <div class="sale-status completed">DONE</div>
+                  <div class="sale-status" [class.completed]="qs.status !== 'CANCELLED'" [class.cancelled]="qs.status === 'CANCELLED'">
+                    {{ qs.status === 'CANCELLED' ? 'CANCELLED' : 'DONE' }}
+                  </div>
                   <div class="sale-time">{{ qs.createdAt | date:'HH:mm':'+0530' }}</div>
                 </div>
               }
@@ -255,7 +257,8 @@ export class SalesHistoryComponent implements OnInit {
   }
 
   get quickSalesTotal(): number {
-    return this.filteredQuickSales.reduce((s, x) => s + (x.total ?? 0), 0);
+    return this.filteredQuickSales.filter(sale => sale.status !== 'CANCELLED')
+      .reduce((sum, sale) => sum + (sale.total ?? 0), 0);
   }
 
   get combinedSalesTotal(): number {
@@ -312,6 +315,11 @@ export class SalesHistoryComponent implements OnInit {
       this.dialog.open(SaleDetailDialogComponent, {
         width: '520px',
         data: { sale: detail, isQuickSale: true }
+      }).afterClosed().subscribe(action => {
+        if (action === 'cancelled') {
+          this.snack.open('Quick sale cancelled', '', { duration: 2000 });
+          this.load();
+        }
       });
     });
   }

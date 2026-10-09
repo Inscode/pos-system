@@ -28,6 +28,7 @@
               "@angular/material/prebuilt-themes/indigo-pink.css",
               "src/styles.scss"
             ],
+            "allowedCommonJsDependencies": ["qz-tray", "jsbarcode"],
             "scripts": []
           },
           "configurations": {
